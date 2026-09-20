@@ -5,6 +5,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"homework-studio/internal/ai"
@@ -55,13 +58,21 @@ type visionResult struct {
 }
 
 func (e *LLMVisionExtractor) Extract(ctx context.Context, in ExtractInput) (ExtractOutput, error) {
-	mime, ok := imageMime(in.Filename)
-	if !ok {
-		// PDFs and unknown types need rasterization first — use the mock reader.
+	imgData, imgMime := in.Data, ""
+	if mime, ok := imageMime(in.Filename); ok {
+		imgMime = mime
+	} else if strings.HasSuffix(strings.ToLower(in.Filename), ".pdf") {
+		// Rasterize the first page (poppler) and read it as an image.
+		png, err := rasterizePDF(ctx, in.Data)
+		if err != nil {
+			return e.fallback.Extract(ctx, in) // no poppler / bad PDF -> mock
+		}
+		imgData, imgMime = png, "image/png"
+	} else {
 		return e.fallback.Extract(ctx, in)
 	}
 
-	dataURL := "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(in.Data)
+	dataURL := "data:" + imgMime + ";base64," + base64.StdEncoding.EncodeToString(imgData)
 	raw, _, err := e.client.ChatVision(ctx, visionSystem, visionUser, dataURL, 0.1, 2048)
 	if err != nil {
 		return e.fallback.Extract(ctx, in)
@@ -123,4 +134,30 @@ func parseVisionJSON(raw string) (visionResult, error) {
 		return vr, fmt.Errorf("parse vision json: %w", err)
 	}
 	return vr, nil
+}
+
+// rasterizePDF renders a PDF's first page to PNG via poppler's `pdftoppm`.
+// Returns an error if poppler is not installed or the PDF is invalid, in which
+// case the caller falls back to the mock reader.
+func rasterizePDF(ctx context.Context, data []byte) ([]byte, error) {
+	if _, err := exec.LookPath("pdftoppm"); err != nil {
+		return nil, err
+	}
+	dir, err := os.MkdirTemp("", "hw-pdf-*")
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(dir)
+
+	inPath := filepath.Join(dir, "in.pdf")
+	if err := os.WriteFile(inPath, data, 0o600); err != nil {
+		return nil, err
+	}
+	outPrefix := filepath.Join(dir, "page")
+	cmd := exec.CommandContext(ctx, "pdftoppm",
+		"-png", "-r", "150", "-f", "1", "-l", "1", "-singlefile", inPath, outPrefix)
+	if err := cmd.Run(); err != nil {
+		return nil, err
+	}
+	return os.ReadFile(outPrefix + ".png")
 }

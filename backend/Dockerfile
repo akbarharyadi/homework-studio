@@ -10,7 +10,9 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -o /out/api ./cmd/api \
 
 # --- runtime ---
 FROM alpine:3.20
-RUN adduser -D -u 10001 app && mkdir -p /app/storage && chown -R app /app
+# poppler-utils provides pdftoppm — used to rasterize PDFs for the GLM vision reader.
+RUN apk add --no-cache poppler-utils \
+ && adduser -D -u 10001 app && mkdir -p /app/storage && chown -R app /app
 WORKDIR /app
 COPY --from=build /out/api /app/api
 COPY --from=build /out/seed /app/seed

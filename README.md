@@ -25,6 +25,15 @@ Real screen recordings of the live app (synthetic data):
 | Upload → auto-grade → **review the flagged answer** → re-graded → dashboard updates | See the child's progress → open the **printable report** | Practice → **100%** → "show me how" (LaTeX) → **ask the tutor** |
 | ![Teacher demo](docs/demo/teacher-demo.gif) | ![Parent demo](docs/demo/parent-demo.gif) | ![Student demo](docs/demo/student-demo.gif) |
 
+### Real GLM vision — it reads an actual photo
+
+With `VISION_PROVIDER=glm`, an uploaded homework **photo or scanned PDF** (poppler
+rasterizes the PDF) is read by **GLM-5.3-flash**: it extracts each question and the
+handwritten answer, computes the key, and grades. Here it reads a photo, **catches the
+wrong answer** (12 + 9 → the student wrote 20, key 21), and grades 80% — no mock.
+
+![GLM-5.3-flash reads a homework photo and grades it](docs/demo/teacher-glm-vision.gif)
+
 **Videos** (rendered from code with Remotion — see [`video/`](video/)):
 a product **walkthrough** and a data-driven **per-student recap**.
 

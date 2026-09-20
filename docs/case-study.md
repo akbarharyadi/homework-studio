@@ -80,10 +80,11 @@ The reuse *is* the point: good judgement about what to build new vs. adapt.
 
 Two things that are genuinely wired, not just scaffolded:
 
-- **Vision reader** — `VISION_PROVIDER=glm` sends the uploaded homework photo to a
-  GLM vision model, which returns each answer with a confidence that drives the
-  gate. Same `Extractor` interface as the mock, so the free demo path is untouched
-  (PDFs fall back to mock — they need rasterization first).
+- **Vision reader** — `VISION_PROVIDER=glm` sends the uploaded homework **photo or
+  scanned PDF** (poppler rasterizes the PDF) to **GLM-5.3-flash**, which returns each
+  answer with a confidence that drives the gate. Verified end-to-end: it read a real
+  worksheet, caught the wrong answer, and graded. Same `Extractor` interface as the
+  mock, so the free demo path is untouched.
 - **Background scheduler** — on a timer (and on startup) it generates every
   student's weekly report + their recap-video data with no one pressing a button.
   Parents see "generated automatically" on their dashboard; the recap JSON feeds
@@ -93,9 +94,10 @@ Two things that are genuinely wired, not just scaffolded:
 
 1. **Self-serve enrollment funnel** (register → pick class → pay → dashboard),
    reusing a multi-step funnel + checkout I've built before.
-2. **PDF rasterization** so the vision reader handles scanned PDFs, not just photos.
-3. **Close the video loop** — have the scheduler render each recap MP4 (not just its
-   data), and email/deliver the weekly report.
+2. **Close the video loop** — have the scheduler render each recap MP4 (not just its
+   data), and deliver the weekly report (e.g. over Telegram via my existing bridge).
+3. **AI-generated practice** — replace the bank-sampling generator with GLM-authored
+   questions (my ai-cbt "quizmaster" pattern).
 
 ## Honesty notes
 
