@@ -57,31 +57,28 @@ automation surfaces in the product.
 
 | School overview (analytics) | Automation (live activity) |
 |---|---|
-| ![Admin overview](docs/manual/img/10-admin-overview.png) | ![Admin automation](docs/manual/img/11-admin-automation.png) |
+| ![Admin overview](docs/manual/img/12-admin-overview.png) | ![Admin automation](docs/manual/img/14-admin-automation.png) |
 
-### Demo videos
+### Watch it — the explainer
 
-Animated, narrated videos (built from code with **Remotion** + a neural voiceover,
-guided by **Otto** the notebook mascot).
+A **~70-second narrated walkthrough** of the whole flow — upload material → the AI
+builds an exam, notes & a tutor → review & publish → students **level up** → parents
+see grades *and* effort → the school at a glance. Built from code with **Remotion** +
+a neural voiceover, guided by **Otto** the notebook mascot; captions in
+[`docs/demo/captions/`](docs/demo/captions) (`.srt`).
 
-> ℹ️ The videos illustrate an **earlier iteration** of the product (homework grading).
-> The app and the [manual](docs/MANUAL.md) now center on **material → exam generation**;
-> the videos will be re-cut to match.
+[![Homework Studio — explainer](docs/demo/explainer-poster.png)](docs/demo/explainer.mp4)
 
-**Short animated promo** — a ~40s promotion-only cut:
+### More videos
 
-[![Homework Studio — animated promo](docs/demo/promo-poster.png)](docs/demo/promo.mp4)
-
-**And a short animated promo for each audience** (~15s each):
+A **short promo** (~40s) and one per audience:
 
 | 🧑‍🏫 For teachers | 🧒 For students | 🏫 For your school |
 |---|---|---|
 | [![Teacher promo](docs/demo/teacher-poster.png)](docs/demo/teacher-promo.mp4) | [![Student promo](docs/demo/student-poster.png)](docs/demo/student-promo.mp4) | [![Admin promo](docs/demo/admin-poster.png)](docs/demo/admin-promo.mp4) |
 
-All four are **narrated** with a neural voiceover, with caption tracks in
-[`docs/demo/captions/`](docs/demo/captions) (`.srt`). Also in [`video/`](video/):
-a slide **walkthrough** (`walkthrough.mp4`) and a data-driven **per-student recap**
-(`recap.mp4`).
+> ℹ️ The promo & role videos are an **earlier cut** (they still say "homework"); the
+> **explainer** above and the app reflect the current material → exam flow.
 
 ---
 

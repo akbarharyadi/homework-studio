@@ -1,39 +1,31 @@
 1
-00:00:00,000 --> 00:00:09,096
-Marking homework by hand takes teachers hours every week. And parents are often left guessing how their child is really doing.
+00:00:00,000 --> 00:00:07,270
+This is Homework Studio. It turns your teaching material into a whole learning loop — here's how.
 
 2
-00:00:10,500 --> 00:00:16,596
-Homework Studio fixes that. Here's how it works, step by step.
+00:00:08,467 --> 00:00:15,487
+It starts with the teacher. Upload a lesson — a PDF, a photo, or plain notes.
 
 3
-00:00:18,000 --> 00:00:25,391
-Step one: just snap a photo of the homework. A worksheet, or even a page from a book.
+00:00:16,700 --> 00:00:24,450
+The AI reads it and builds three things: a custom exam, teaching notes, and a tutor that knows your class.
 
 4
-00:00:27,000 --> 00:00:35,328
-Step two: the A.I. reads every question and every handwritten answer, and tells you how confident it is about each one.
+00:00:25,667 --> 00:00:34,727
+You stay in control. The AI flags its least-confident questions for you to check — approve, and publish to your students.
 
 5
-00:00:37,000 --> 00:00:43,576
-Step three: correct answers are scored instantly, so a whole class is graded in seconds.
+00:00:35,933 --> 00:00:44,083
+Students take it, graded in an instant — and they level up, with points, streaks, badges, and a class leaderboard.
 
 6
-00:00:45,000 --> 00:00:56,399
-Step four, and this is the important one. If it isn't sure it read an answer correctly, it never guesses the grade. It asks the teacher to confirm.
+00:00:45,300 --> 00:00:51,950
+Parents see the whole child — grades and effort — with a warm tip on exactly how to help at home.
 
 7
-00:00:58,000 --> 00:01:06,519
-Step five: every week, a warm, plain-language progress report is written for each child, completely automatically.
+00:00:53,167 --> 00:01:01,267
+And leaders get the school at a glance — engagement, trends, the hardest questions, and reports written all on their own.
 
 8
-00:01:08,000 --> 00:01:13,831
-It even flags students who are falling behind, so no one slips through the cracks.
-
-9
-00:01:15,333 --> 00:01:20,181
-And when kids get stuck, a friendly tutor shows them the steps.
-
-10
-00:01:21,833 --> 00:01:32,273
-Less marking for teachers. Real visibility for parents. Learning that kids enjoy. That's Homework Studio.
+00:01:02,467 --> 00:01:07,827
+Homework Studio — from your material, to learning kids actually love.
