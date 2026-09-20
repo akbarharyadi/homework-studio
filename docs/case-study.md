@@ -53,10 +53,12 @@ I use AI both as **build-time leverage** and as **runtime providers**:
 
 - **Coding agents** (GLM coding plan, and CLI agents) to move fast in a messy,
   real-world codebase — this demo was assembled with that workflow.
-- **Runtime LLMs, OpenAI-compatible and swappable:** **DeepSeek** and **GLM** for
-  the tutor's explanations and chat; **TypeAI's `jev`** for the classification
+- **Runtime LLMs, OpenAI-compatible and swappable:** **GLM** (my GLM coding plan)
+  is the recommended provider for the tutor's explanations and chat, with DeepSeek
+  and OpenAI as drop-in alternates; **TypeAI's `jev`** handles the classification
   step (identifying a homework's subject and sanity-checking answers). One client
-  shape serves all of them; switching is `AI_PROVIDER` / `CLASSIFIER_PROVIDER`.
+  shape serves all of them; switching is `AI_PROVIDER` / `CLASSIFIER_PROVIDER`, and
+  a deterministic mock keeps the public demo free.
 
 ## Built by assembling my own prior work
 

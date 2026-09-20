@@ -16,6 +16,15 @@ with a single `docker compose up`.
 | **Upload → read → grade → gate** | **Parent progress** |
 | ![Upload](docs/screenshots/teacher-upload.jpg) | ![Parent](docs/screenshots/parent-progress.jpg) |
 
+### Watch it run — end to end, one per role
+
+Real screen recordings of the live app (synthetic data):
+
+| 🧑‍🏫 Teacher | 👪 Parent | 🧒 Student |
+|---|---|---|
+| Upload → auto-grade → **review the flagged answer** → re-graded → dashboard updates | See the child's progress → open the **printable report** | Practice → **100%** → "show me how" (LaTeX) → **ask the tutor** |
+| ![Teacher demo](docs/demo/teacher-demo.gif) | ![Parent demo](docs/demo/parent-demo.gif) | ![Student demo](docs/demo/student-demo.gif) |
+
 **Videos** (rendered from code with Remotion — see [`video/`](video/)):
 a product **walkthrough** and a data-driven **per-student recap**.
 
@@ -119,11 +128,12 @@ spend — so the hosted demo is free and reproducible. Flip to a real provider w
 env vars (all OpenAI-compatible):
 
 ```bash
-# Tutor + explanation generation
-AI_PROVIDER=deepseek
-AI_API_KEY=sk-...
-AI_BASE_URL=https://api.deepseek.com/v1      # or GLM / TypeAI / OpenAI
-AI_MODEL=deepseek-chat
+# Tutor + explanations — recommended: GLM (the GLM coding plan), OpenAI-compatible
+AI_PROVIDER=glm
+AI_API_KEY=<your GLM key>
+AI_BASE_URL=https://open.bigmodel.cn/api/paas/v4   # or your plan's endpoint
+AI_MODEL=glm-4-flash                                # or glm-4.6 / glm-4.5
+# (DeepSeek / OpenAI work too — same shape, just swap base URL + model.)
 
 # Homework classification via jev (TypeAI)
 CLASSIFIER_PROVIDER=typeai
