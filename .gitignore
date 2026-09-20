@@ -23,3 +23,6 @@ Thumbs.db
 
 # Uploads / local data
 docker/pgdata/
+
+# GLM/AI secrets for docker (never commit)
+docker/.env

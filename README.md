@@ -129,23 +129,22 @@ spend — so the hosted demo is free and reproducible. Flip to a real provider w
 env vars (all OpenAI-compatible):
 
 ```bash
-# Tutor + explanations — recommended: GLM (the GLM coding plan), OpenAI-compatible
+# Tutor + explanations — GLM via the Z.AI coding plan (OpenAI-compatible)
 AI_PROVIDER=glm
-AI_API_KEY=<your GLM key>
-AI_BASE_URL=https://open.bigmodel.cn/api/paas/v4   # or your plan's endpoint
-AI_MODEL=glm-4-flash                                # or glm-4.6 / glm-4.5
+AI_API_KEY=<your Z.AI coding-plan key>
+AI_BASE_URL=https://api.z.ai/api/coding/paas/v4
+AI_MODEL=glm-5.3                    # glm-5.3-flash / glm-4.6 also work
 # (DeepSeek / OpenAI work too — same shape, just swap base URL + model.)
+
+# Read the actual homework photo — GLM-5.3-flash (verified). Falls back to mock
+# for PDFs and on error. Key/base URL reuse AI_* (same Z.AI key) by default.
+VISION_PROVIDER=glm
+VISION_MODEL=glm-5.3-flash
 
 # Homework classification via jev (TypeAI)
 CLASSIFIER_PROVIDER=typeai
 CLASSIFIER_API_KEY=...
-CLASSIFIER_BASE_URL=https://api.typeai.co/v1
 CLASSIFIER_MODEL=jev
-
-# Read the actual homework photo with a GLM vision model (falls back to mock for
-# PDFs and on error). Key/base URL reuse AI_* by default (same GLM plan).
-VISION_PROVIDER=glm
-VISION_MODEL=glm-4v-flash          # your GLM vision-capable model
 
 # Background automation: auto-generate each student's weekly report + recap data.
 SCHEDULER_ENABLED=true
@@ -153,7 +152,10 @@ SCHEDULER_INTERVAL=6h               # also runs once on startup
 ```
 
 The mock and real paths implement the same interfaces, so switching providers is
-a config change, not a rewrite.
+a config change, not a rewrite. **For the Docker stack**, copy
+`docker/.env.example` → `docker/.env` (gitignored) with your key and
+`docker compose up` runs on real GLM — including GLM-5.3-flash reading actual
+homework photos.
 
 ---
 
