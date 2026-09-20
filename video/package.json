@@ -6,9 +6,13 @@
   "scripts": {
     "studio": "remotion studio",
     "render:promo": "remotion render Promo out/promo.mp4 --codec h264",
+    "render:teacher": "remotion render TeacherPromo out/teacher-promo.mp4 --codec h264",
+    "render:student": "remotion render StudentPromo out/student-promo.mp4 --codec h264",
+    "render:admin": "remotion render AdminPromo out/admin-promo.mp4 --codec h264",
+    "render:roles": "npm run render:teacher && npm run render:student && npm run render:admin",
     "render:recap": "remotion render Recap out/recap.mp4",
     "render:walkthrough": "remotion render Walkthrough out/walkthrough.mp4",
-    "render:all": "npm run render:promo && npm run render:walkthrough && npm run render:recap"
+    "render:all": "npm run render:promo && npm run render:roles && npm run render:walkthrough && npm run render:recap"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.240",

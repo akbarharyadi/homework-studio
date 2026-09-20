@@ -19,13 +19,13 @@ const rand = (i: number) => {
   return x - Math.floor(x);
 };
 
-const useEnter = (delay = 0, damping = 14) => {
+export const useEnter = (delay = 0, damping = 14) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   return spring({ frame: frame - delay, fps, config: { damping, mass: 0.8 } });
 };
 
-const Caption: React.FC<{ step?: number; text: string }> = ({ step, text }) => {
+export const Caption: React.FC<{ step?: number; text: string }> = ({ step, text }) => {
   const e = useEnter(6, 16);
   return (
     <div
@@ -78,7 +78,7 @@ const Caption: React.FC<{ step?: number; text: string }> = ({ step, text }) => {
   );
 };
 
-const Chip: React.FC<{ children: ReactNode; tone?: "brand" | "grow" | "flag"; style?: CSSProperties }> = ({
+export const Chip: React.FC<{ children: ReactNode; tone?: "brand" | "grow" | "flag"; style?: CSSProperties }> = ({
   children,
   tone = "brand",
   style,
@@ -109,7 +109,7 @@ const Chip: React.FC<{ children: ReactNode; tone?: "brand" | "grow" | "flag"; st
   );
 };
 
-const Sparkle: React.FC<{ x: number; y: number; delay: number; scale?: number }> = ({ x, y, delay, scale = 1 }) => {
+export const Sparkle: React.FC<{ x: number; y: number; delay: number; scale?: number }> = ({ x, y, delay, scale = 1 }) => {
   const frame = useCurrentFrame();
   const t = (frame - delay) % 90;
   const s = interpolate(t, [0, 12, 30], [0, 1, 0], { extrapolateRight: "clamp" }) * scale;
@@ -122,7 +122,7 @@ const Sparkle: React.FC<{ x: number; y: number; delay: number; scale?: number }>
   );
 };
 
-const Confetti: React.FC<{ start: number; n?: number }> = ({ start, n = 70 }) => {
+export const Confetti: React.FC<{ start: number; n?: number }> = ({ start, n = 70 }) => {
   const frame = useCurrentFrame();
   const local = frame - start;
   if (local < 0) return null;
@@ -167,7 +167,7 @@ const PROBLEMS: [string, string, boolean][] = [
 ];
 
 // The homework "paper" card, optionally revealing ✓/✗ marks up to `scan` (0..1).
-const HomeworkPaper: React.FC<{ scan?: number; showMarks?: boolean; highlightRow?: number }> = ({
+export const HomeworkPaper: React.FC<{ scan?: number; showMarks?: boolean; highlightRow?: number }> = ({
   scan = 0,
   showMarks = false,
   highlightRow = -1,
@@ -260,7 +260,7 @@ const Mark: React.FC<{ ok: boolean }> = ({ ok }) => {
 
 /* ---------------- scenes ---------------- */
 
-const SceneWrap: React.FC<{ children: ReactNode; bg?: string }> = ({ children, bg }) => (
+export const SceneWrap: React.FC<{ children: ReactNode; bg?: string }> = ({ children, bg }) => (
   <AbsoluteFill style={{ ...graphPaper(bg), fontFamily: jakarta }}>{children}</AbsoluteFill>
 );
 
@@ -342,7 +342,7 @@ const S3Read: React.FC = () => {
         <div style={{ display: "flex", alignItems: "center", gap: 50 }}>
           <div style={{ position: "relative" }}>
             <Chip tone="brand" style={{ position: "absolute", top: -54, left: 8 }}>
-              👁️ Read by GLM-5.3-flash
+              ✨ read in seconds
             </Chip>
             <HomeworkPaper scan={scan} showMarks />
           </div>
@@ -531,7 +531,7 @@ const S6Outro: React.FC = () => {
           Serious software, made playful.
         </div>
         <div style={{ display: "flex", gap: 14, marginTop: 28, opacity: wm }}>
-          {["Self-hosted", "Go · React", "GLM vision + auto reports"].map((tg) => (
+          {["For teachers", "For parents", "For kids"].map((tg) => (
             <div key={tg} style={{ fontFamily: jakarta, fontWeight: 700, fontSize: 24, color: "#fff", background: "rgba(255,255,255,0.14)", padding: "10px 20px", borderRadius: 999 }}>
               {tg}
             </div>

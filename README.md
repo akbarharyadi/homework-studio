@@ -50,6 +50,12 @@ notebook mascot, walking through the whole story (rendered from code with Remoti
 
 [![Homework Studio — animated promo](docs/demo/promo-poster.png)](docs/demo/promo.mp4)
 
+**And a short animated promo for each audience** (~15s each):
+
+| 🧑‍🏫 For teachers | 🧒 For students | 🏫 For your school |
+|---|---|---|
+| [![Teacher promo](docs/demo/teacher-poster.png)](docs/demo/teacher-promo.mp4) | [![Student promo](docs/demo/student-poster.png)](docs/demo/student-promo.mp4) | [![Admin promo](docs/demo/admin-poster.png)](docs/demo/admin-promo.mp4) |
+
 Also in [`video/`](video/): a slide **walkthrough** (`walkthrough.mp4`) and a
 data-driven **per-student recap** (`recap.mp4`).
 

@@ -4,7 +4,8 @@ Two videos, both rendered from code:
 
 | Composition | What it is | Size |
 |---|---|---|
-| **Promo** | A ~40s animated motion-graphics promo starring **Otto**, the notebook mascot (`src/Mascot.tsx`), walking through the whole story with springs, a scan-and-grade beat, an auto-report, and confetti. | 1920×1080 |
+| **Promo** | A ~40s animated, promotion-only motion-graphics video starring **Otto**, the notebook mascot (`src/Mascot.tsx`) — springs, a scan-and-grade beat, an auto-report, and confetti. No tech jargon. | 1920×1080 |
+| **TeacherPromo / StudentPromo / AdminPromo** | ~15s role-specific animated promos (`src/RolePromo.tsx`), one per audience, reusing Otto + the scene parts. | 1920×1080 |
 | **Walkthrough** | A narrated, slide-based tour of the product's story (upload → read → classify → grade → gate → parent report → tutor). | 1920×1080 |
 | **Recap** | A ~14s celebratory **per-student progress recap**, generated entirely from the child's data (average, streak, subject strengths, trend). | 1080×1080 |
 
