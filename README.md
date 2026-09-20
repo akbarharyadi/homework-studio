@@ -34,12 +34,13 @@ wrong answer** (12 + 9 → the student wrote 20, key 21), and grades 80% — no 
 
 ![GLM-5.3-flash reads a homework photo and grades it](docs/demo/teacher-glm-vision.gif)
 
-**Videos** (rendered from code with Remotion — see [`video/`](video/)):
-a product **walkthrough** and a data-driven **per-student recap**.
+**Animated product video** — a ~40s motion-graphics promo starring **Otto**, the
+notebook mascot, walking through the whole story (rendered from code with Remotion):
 
-| Walkthrough (`video/out/walkthrough.mp4`) | Per-student recap (`video/out/recap.mp4`) |
-|---|---|
-| ![Walkthrough](docs/screenshots/walkthrough-frame.jpg) | ![Recap](docs/screenshots/recap-frame.jpg) |
+[![Homework Studio — animated promo](docs/demo/promo-poster.png)](docs/demo/promo.mp4)
+
+Also in [`video/`](video/): a slide **walkthrough** (`walkthrough.mp4`) and a
+data-driven **per-student recap** (`recap.mp4`).
 
 ---
 
