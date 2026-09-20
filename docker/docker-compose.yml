@@ -1,0 +1,59 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: homework
+      POSTGRES_PASSWORD: homework
+      POSTGRES_DB: homework
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U homework"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build: ../backend
+    environment:
+      PORT: "8080"
+      DATABASE_URL: postgres://homework:homework@postgres:5432/homework?sslmode=disable
+      STORAGE_DIR: /app/storage
+      FRONTEND_ORIGIN: http://localhost:3000
+      SECRET_KEY: dev-secret-change-me
+      AI_PROVIDER: mock
+      CLASSIFIER_PROVIDER: mock
+      REVIEW_CONFIDENCE_THRESHOLD: "0.80"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - uploads:/app/storage
+
+  # One-shot: seed the demo dataset, then exit. Run with:
+  #   docker compose run --rm seed
+  seed:
+    build: ../backend
+    command: ["/app/seed"]
+    environment:
+      DATABASE_URL: postgres://homework:homework@postgres:5432/homework?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles: ["tools"]
+
+  frontend:
+    build: ../frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    profiles: ["full"]
+
+volumes:
+  pgdata:
+  uploads:

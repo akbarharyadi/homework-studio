@@ -1,0 +1,13 @@
+{
+  "studentName": "Aisha Putri",
+  "gradeLevel": "Grade 4",
+  "overallAverage": 80,
+  "homeworksDone": 6,
+  "streakDays": 5,
+  "subjects": [
+    { "name": "Math", "average": 88, "color": "#6366f1" },
+    { "name": "Science", "average": 72, "color": "#10b981" }
+  ],
+  "timeline": [55, 60, 68, 74, 80, 88],
+  "topSubject": "Math"
+}

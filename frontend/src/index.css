@@ -1,0 +1,35 @@
+@import "katex/dist/katex.min.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900 antialiased;
+}
+
+/* Markdown/KaTeX explanation blocks */
+.prose-tutor p {
+  @apply my-2 leading-relaxed;
+}
+.prose-tutor strong {
+  @apply font-semibold text-slate-900;
+}
+
+/* Print: only the report, no app chrome (used by the parent progress report). */
+@media print {
+  header,
+  nav {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+    max-width: none !important;
+  }
+  body {
+    background: #fff !important;
+  }
+}

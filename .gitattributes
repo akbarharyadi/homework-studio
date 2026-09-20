@@ -1,0 +1,10 @@
+# Normalize line endings across platforms.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.mp4 binary
+*.woff binary
+*.woff2 binary
+*.ttf binary

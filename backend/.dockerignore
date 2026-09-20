@@ -1,0 +1,6 @@
+.env
+storage/
+bin/
+*.exe
+tests/
+.git/

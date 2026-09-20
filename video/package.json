@@ -1,0 +1,22 @@
+{
+  "name": "homework-studio-video",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Remotion videos for Homework Studio: a product walkthrough and a data-driven per-student progress recap.",
+  "scripts": {
+    "studio": "remotion studio",
+    "render:recap": "remotion render Recap out/recap.mp4",
+    "render:walkthrough": "remotion render Walkthrough out/walkthrough.mp4",
+    "render:all": "npm run render:walkthrough && npm run render:recap"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.240",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "^4.0.240"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "typescript": "^5.6.3"
+  }
+}

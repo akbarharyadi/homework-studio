@@ -1,0 +1,25 @@
+# Backend (Go)
+backend/storage/
+backend/bin/
+backend/*.exe
+backend/.env
+
+# Frontend (Node/Vite)
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+
+# Video (Remotion)
+video/node_modules/
+video/out/
+video/public/capture/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/
+
+# Uploads / local data
+docker/pgdata/
