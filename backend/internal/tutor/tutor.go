@@ -128,6 +128,31 @@ func clip(s string, n int) string {
 	return s[:n] + "…"
 }
 
+// GenerateParentTip writes a short, warm "how to help at home" tip for a parent,
+// from the child's strongest and weakest subjects. Falls back to a template.
+func (s *Service) GenerateParentTip(ctx context.Context, tenantID, name, bestSubj, worstSubj string, bestAvg, worstAvg float64, hasData bool) string {
+	if !hasData {
+		return name + " is just getting started — cheer them on as they take their first exams! 🌟"
+	}
+	if s.client.Enabled() {
+		prompt := fmt.Sprintf(
+			"Write ONE short, warm, encouraging tip (max 2 sentences) for a parent to help their child %s at home. Strongest subject: %s (%.0f%%). Area to grow: %s (%.0f%%). Be specific and practical — no lists, no preamble.",
+			name, bestSubj, bestAvg, worstSubj, worstAvg)
+		out, usage, err := s.client.Chat(ctx, []ai.Message{
+			{Role: "system", Content: "You write a single warm, practical sentence of advice to a parent about their child's learning."},
+			{Role: "user", Content: prompt},
+		}, 0.5, 200)
+		if err == nil && strings.TrimSpace(out) != "" {
+			s.store.LogAIUsage(ctx, tenantID, nil, "parent_tip", usage.PromptTokens, usage.CompletionTokens, s.client.Model())
+			return strings.TrimSpace(out)
+		}
+	}
+	if bestSubj == worstSubj {
+		return fmt.Sprintf("%s is doing steadily in %s (%.0f%%). A little practice together each day keeps it up! 🌟", name, bestSubj, bestAvg)
+	}
+	return fmt.Sprintf("%s is strongest in %s (%.0f%%) — celebrate that! A fun 10 minutes of %s practice together would help the most.", name, bestSubj, bestAvg, worstSubj)
+}
+
 // SubmitResult reports the grade of a finished practice set.
 type SubmitResult struct {
 	Score    float64                  `json:"score"`

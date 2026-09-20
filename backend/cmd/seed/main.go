@@ -55,14 +55,16 @@ func main() {
 	must(st.CreateSubject(ctx, math))
 	must(st.CreateSubject(ctx, science))
 
-	// --- Students (Aisha is linked to the parent login) ---
+	// --- Students (Aisha + Rizky are linked to the parent login) ---
 	aisha := &domain.Student{TenantID: tenant.ID, Name: "Aisha Putri", GradeLevel: "Grade 4", ParentUserID: &parent.ID}
+	rizky := &domain.Student{TenantID: tenant.ID, Name: "Rizky Putra", GradeLevel: "Grade 2", ParentUserID: &parent.ID}
 	students := []*domain.Student{
 		aisha,
 		{TenantID: tenant.ID, Name: "Budi Santoso", GradeLevel: "Grade 4"},
 		{TenantID: tenant.ID, Name: "Chandra Wijaya", GradeLevel: "Grade 4"},
 		{TenantID: tenant.ID, Name: "Dewi Lestari", GradeLevel: "Grade 5"},
 		{TenantID: tenant.ID, Name: "Eka Pratama", GradeLevel: "Grade 5"},
+		rizky, // index 5 — the parent's second child
 	}
 	for _, s := range students {
 		must(st.CreateStudent(ctx, s))
@@ -103,6 +105,7 @@ func main() {
 		students[2].ID: {70, 65, 60, 70, 65}, // Chandra
 		students[3].ID: {50, 55, 60, 50, 55}, // Dewi
 		students[4].ID: {60, 65, 70, 60, 65}, // Eka
+		rizky.ID:       {55, 45, 60},         // Rizky (Grade 2) — needs a little support
 	}
 	for sid, scs := range profiles {
 		for i, pct := range scs {

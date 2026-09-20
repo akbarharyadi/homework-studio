@@ -29,8 +29,14 @@ func Setup(app *fiber.App, h *handler.Handler, authMgr *auth.Manager) {
 	authed.Get("/students/:id/progress", h.StudentProgress)
 	authed.Get("/students/:id/gamification", h.StudentGamification)
 	authed.Get("/students/:id/attempts", h.ListAttempts)
+	authed.Get("/students/:id/vs-class", h.CompareToClass)
+	authed.Get("/students/:id/tip", h.ParentTip)
 	authed.Get("/attempts/:id/review", h.AttemptReview)
 	authed.Get("/leaderboard", h.Leaderboard)
+
+	// Parent — family dashboard + activity feed.
+	authed.Get("/family", h.FamilyDashboard)
+	authed.Get("/family/activity", h.FamilyActivity)
 
 	// Auto-generated weekly report (produced by the background scheduler).
 	authed.Get("/reports/student/:id", h.LatestStudentReport)

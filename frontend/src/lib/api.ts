@@ -183,6 +183,33 @@ export interface LeaderRow {
   is_me: boolean;
 }
 
+export interface FamilyChild {
+  student_id: string;
+  name: string;
+  grade_level: string;
+  average: number;
+  exams_taken: number;
+  level: number;
+  xp: number;
+  streak: number;
+  badges: number;
+  subjects: { subject: string; color: string; average: number }[];
+  needs_attention: boolean;
+}
+export interface ActivityItem {
+  kind: "report" | "alert" | "exam" | "badge";
+  icon: string;
+  text: string;
+  date: string;
+}
+export interface SubjectVsClass {
+  subject: string;
+  color: string;
+  child: number;
+  class: number;
+  delta: number;
+}
+
 export interface ClassStats {
   students: number;
   exams_taken: number;
@@ -259,6 +286,13 @@ export const api = {
   students: () => request<Student[]>("/students"),
   studentProgress: (id: string) => request<StudentProgress>(`/students/${id}/progress`),
   latestReport: (id: string) => request<StudentReportInfo>(`/reports/student/${id}`),
+
+  // Parent — family dashboard.
+  family: () => request<FamilyChild[]>("/family"),
+  familyActivity: () => request<ActivityItem[]>("/family/activity"),
+  compareToClass: (id: string) => request<SubjectVsClass[]>(`/students/${id}/vs-class`),
+  parentTip: (id: string) => request<{ tip: string }>(`/students/${id}/tip`),
+  childGamification: (id: string) => request<Gamification>(`/students/${id}/gamification`),
 
   // Teacher — teaching material + generated exams.
   uploadMaterial: (form: FormData) =>

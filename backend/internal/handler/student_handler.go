@@ -3,13 +3,19 @@ package handler
 import (
 	"github.com/gofiber/fiber/v2"
 
+	"homework-studio/internal/domain"
 	"homework-studio/internal/httpx"
 	"homework-studio/internal/middleware"
 )
 
 // StudentGamification returns a student's XP / level / streak / badges.
 func (h *Handler) StudentGamification(c *fiber.Ctx) error {
-	g, err := h.store.StudentGamification(c.Context(), middleware.TenantID(c), c.Params("id"))
+	tid := middleware.TenantID(c)
+	sid := c.Params("id")
+	if middleware.Role(c) == domain.RoleParent && !h.parentOwnsStudent(c, tid, sid) {
+		return httpx.Forbidden(c, "not your student")
+	}
+	g, err := h.store.StudentGamification(c.Context(), tid, sid)
 	if err != nil {
 		return httpx.Internal(c, "could not load progress")
 	}
