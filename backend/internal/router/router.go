@@ -27,6 +27,10 @@ func Setup(app *fiber.App, h *handler.Handler, authMgr *auth.Manager) {
 	authed.Get("/subjects", h.ListSubjects)
 	authed.Get("/students", h.ListStudents)
 	authed.Get("/students/:id/progress", h.StudentProgress)
+	authed.Get("/students/:id/gamification", h.StudentGamification)
+	authed.Get("/students/:id/attempts", h.ListAttempts)
+	authed.Get("/attempts/:id/review", h.AttemptReview)
+	authed.Get("/leaderboard", h.Leaderboard)
 
 	// Auto-generated weekly report (produced by the background scheduler).
 	authed.Get("/reports/student/:id", h.LatestStudentReport)
@@ -35,6 +39,7 @@ func Setup(app *fiber.App, h *handler.Handler, authMgr *auth.Manager) {
 	// (Register the static /exams/published before the teacher's /exams/:id.)
 	authed.Get("/exams/published", h.ListPublishedExams)
 	authed.Post("/exams/:id/start", h.StartExam)
+	authed.Post("/practice/generate", h.GeneratePractice)
 	authed.Post("/practice/:id/submit", h.SubmitPractice)
 	authed.Get("/questions/:id/explain", h.ExplainQuestion)
 	authed.Post("/tutor/chat", h.TutorChat)

@@ -12,7 +12,11 @@ import { TeacherExams } from "./pages/teacher/Exams";
 import { TeacherExamReview } from "./pages/teacher/ExamReview";
 import { ParentProgress } from "./pages/parent/Progress";
 import { ParentReport } from "./pages/parent/Report";
+import { StudentHome } from "./pages/student/Home";
 import { StudentExams } from "./pages/student/Exams";
+import { StudentPractice } from "./pages/student/Practice";
+import { StudentResults } from "./pages/student/Results";
+import { StudentReview } from "./pages/student/Review";
 import { StudentTutor } from "./pages/student/Tutor";
 import { AdminOverviewPage } from "./pages/admin/Overview";
 import { AdminAutomationPage } from "./pages/admin/Automation";
@@ -67,7 +71,11 @@ export default function App() {
               path="/parent/report/:studentId"
               element={<Require roles={["parent"]}><ParentReport /></Require>}
             />
-            <Route path="/student" element={<Require roles={["student"]}><StudentExams /></Require>} />
+            <Route path="/student" element={<Require roles={["student"]}><StudentHome /></Require>} />
+            <Route path="/student/exams" element={<Require roles={["student"]}><StudentExams /></Require>} />
+            <Route path="/student/practice" element={<Require roles={["student"]}><StudentPractice /></Require>} />
+            <Route path="/student/results" element={<Require roles={["student"]}><StudentResults /></Require>} />
+            <Route path="/student/results/:id" element={<Require roles={["student"]}><StudentReview /></Require>} />
             <Route path="/student/tutor" element={<Require roles={["student"]}><StudentTutor /></Require>} />
             <Route path="/admin" element={<Require roles={["admin"]}><AdminOverviewPage /></Require>} />
             <Route path="/admin/automation" element={<Require roles={["admin"]}><AdminAutomationPage /></Require>} />

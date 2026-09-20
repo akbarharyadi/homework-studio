@@ -17,7 +17,9 @@ const NAV: Record<string, { to: string; label: string; icon: string; end?: boole
   ],
   parent: [{ to: "/parent", label: "My children", icon: "👪", end: true }],
   student: [
-    { to: "/student", label: "Exams", icon: "📝", end: true },
+    { to: "/student", label: "Home", icon: "🏠", end: true },
+    { to: "/student/exams", label: "Exams", icon: "📝" },
+    { to: "/student/practice", label: "Practice", icon: "💪" },
     { to: "/student/tutor", label: "Tutor", icon: "💬" },
   ],
 };

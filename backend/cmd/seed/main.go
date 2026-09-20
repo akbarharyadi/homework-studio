@@ -95,18 +95,28 @@ func main() {
 	// --- A teacher-uploaded material + a draft exam awaiting review (shows the gate) ---
 	seedMaterialWithDraftExam(ctx, st, tenant.ID, teacher.ID, math.ID, "Fractions for Grade 4")
 
-	// --- Finished attempts, so progress / parent / admin show real data on a fresh seed ---
-	scores := map[string][2]float64{ // {math, science}
-		aisha.ID:      {100, 80},
-		students[1].ID: {60, 60}, // Budi
-		students[2].ID: {70, 60}, // Chandra
-		students[3].ID: {50, 60}, // Dewi
-		students[4].ID: {60, 70}, // Eka
+	// --- Finished attempts spread over the last 5 days, so progress / streaks / the
+	//     leaderboard show real data on a fresh seed (alternating math/science). ---
+	profiles := map[string][]float64{
+		aisha.ID:       {90, 80, 100, 90, 100},
+		students[1].ID: {55, 60, 60, 65, 60}, // Budi
+		students[2].ID: {70, 65, 60, 70, 65}, // Chandra
+		students[3].ID: {50, 55, 60, 50, 55}, // Dewi
+		students[4].ID: {60, 65, 70, 60, 65}, // Eka
 	}
-	for sid, sc := range scores {
-		seedAttempt(ctx, st, tenant.ID, sid, math.ID, mathExam, sc[0])
-		seedAttempt(ctx, st, tenant.ID, sid, science.ID, sciExam, sc[1])
+	for sid, scs := range profiles {
+		for i, pct := range scs {
+			daysAgo := len(scs) - 1 - i // oldest first, newest today → a 5-day streak
+			subj, exam := math.ID, mathExam
+			if i%2 == 1 {
+				subj, exam = science.ID, sciExam
+			}
+			seedAttempt(ctx, st, tenant.ID, sid, subj, exam, pct, daysAgo)
+		}
 	}
+	// A couple of ungraded practice attempts for Aisha (earn XP, not counted in grades).
+	seedPractice(ctx, st, tenant.ID, aisha.ID, math.ID, 80, 1)
+	seedPractice(ctx, st, tenant.ID, aisha.ID, science.ID, 100, 0)
 
 	log.Printf("✅ demo seeded.\n  School: %s\n  Logins (password %q):\n    teacher@demo.id\n    parent@demo.id\n    student@demo.id\n    admin@demo.id\n  Subjects: Math, Science. Students: %d. Bank + material + 2 published exams + attempts loaded.",
 		tenant.Name, pass, len(students))
@@ -247,12 +257,21 @@ func seedMaterialWithDraftExam(ctx context.Context, st *store.Store, tenantID, t
 	}
 }
 
-// seedAttempt records a finished exam attempt with a score.
-func seedAttempt(ctx context.Context, st *store.Store, tenantID, studentID, subjectID, examID string, percent float64) {
+// seedAttempt records a finished exam attempt with a score, N days ago.
+func seedAttempt(ctx context.Context, st *store.Store, tenantID, studentID, subjectID, examID string, percent float64, daysAgo int) {
 	_, err := st.Pool().Exec(ctx,
 		`INSERT INTO practice_sets (id, tenant_id, student_id, subject_id, status, score, percent, snapshot, exam_id, finished_at)
-		 VALUES ($1,$2,$3,$4,'finished',$5,$6,'[]',$7, now())`,
-		domain.NewID(), tenantID, studentID, subjectID, percent/20, percent, examID)
+		 VALUES ($1,$2,$3,$4,'finished',$5,$6,'[]',$7, now() - make_interval(days => $8))`,
+		domain.NewID(), tenantID, studentID, subjectID, percent/20, percent, examID, daysAgo)
+	must(err)
+}
+
+// seedPractice records a finished, ungraded practice attempt (exam_id NULL).
+func seedPractice(ctx context.Context, st *store.Store, tenantID, studentID, subjectID string, percent float64, daysAgo int) {
+	_, err := st.Pool().Exec(ctx,
+		`INSERT INTO practice_sets (id, tenant_id, student_id, subject_id, status, score, percent, snapshot, finished_at)
+		 VALUES ($1,$2,$3,$4,'finished',$5,$6,'[]', now() - make_interval(days => $7))`,
+		domain.NewID(), tenantID, studentID, subjectID, percent/20, percent, daysAgo)
 	must(err)
 }
 

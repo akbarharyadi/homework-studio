@@ -30,7 +30,7 @@ func (s *Store) ClassStats(ctx context.Context, tenantID string) (*ClassStats, e
 		`SELECT COUNT(*) FROM students WHERE tenant_id=$1`, tenantID).Scan(&cs.Students)
 
 	_ = s.pool.QueryRow(ctx,
-		`SELECT COUNT(*) FROM practice_sets WHERE tenant_id=$1 AND status='finished'`, tenantID).
+		`SELECT COUNT(*) FROM practice_sets WHERE tenant_id=$1 AND status='finished' AND exam_id IS NOT NULL`, tenantID).
 		Scan(&cs.ExamsTaken)
 
 	// AI-generated exam questions still waiting for the teacher to review.
@@ -40,7 +40,7 @@ func (s *Store) ClassStats(ctx context.Context, tenantID string) (*ClassStats, e
 		Scan(&cs.PendingReview)
 
 	_ = s.pool.QueryRow(ctx,
-		`SELECT COALESCE(AVG(percent),0) FROM practice_sets WHERE tenant_id=$1 AND status='finished'`, tenantID).
+		`SELECT COALESCE(AVG(percent),0) FROM practice_sets WHERE tenant_id=$1 AND status='finished' AND exam_id IS NOT NULL`, tenantID).
 		Scan(&cs.AveragePercent)
 
 	buckets := []struct {
@@ -57,7 +57,7 @@ func (s *Store) ClassStats(ctx context.Context, tenantID string) (*ClassStats, e
 		var n int
 		_ = s.pool.QueryRow(ctx,
 			`SELECT COUNT(*) FROM practice_sets
-			 WHERE tenant_id=$1 AND status='finished' AND percent>=$2 AND percent<=$3`,
+			 WHERE tenant_id=$1 AND status='finished' AND exam_id IS NOT NULL AND percent>=$2 AND percent<=$3`,
 			tenantID, b.lo, b.hi).Scan(&n)
 		cs.ScoreBuckets = append(cs.ScoreBuckets, BucketCount{Label: b.label, Count: n})
 	}
@@ -65,7 +65,7 @@ func (s *Store) ClassStats(ctx context.Context, tenantID string) (*ClassStats, e
 	rows, err := s.pool.Query(ctx,
 		`SELECT sub.name, sub.color, COALESCE(AVG(ps.percent),0) AS avg
 		 FROM subjects sub
-		 LEFT JOIN practice_sets ps ON ps.subject_id = sub.id AND ps.status='finished'
+		 LEFT JOIN practice_sets ps ON ps.subject_id = sub.id AND ps.status='finished' AND ps.exam_id IS NOT NULL
 		 WHERE sub.tenant_id=$1
 		 GROUP BY sub.name, sub.color
 		 ORDER BY sub.name`, tenantID)
@@ -118,7 +118,7 @@ func (s *Store) StudentProgress(ctx context.Context, tenantID, studentID string)
 
 	_ = s.pool.QueryRow(ctx,
 		`SELECT COALESCE(AVG(percent),0) FROM practice_sets
-		 WHERE tenant_id=$1 AND student_id=$2 AND status='finished'`, tenantID, studentID).
+		 WHERE tenant_id=$1 AND student_id=$2 AND status='finished' AND exam_id IS NOT NULL`, tenantID, studentID).
 		Scan(&sp.OverallAverage)
 
 	rows, err := s.pool.Query(ctx,
@@ -127,7 +127,7 @@ func (s *Store) StudentProgress(ctx context.Context, tenantID, studentID string)
 		 FROM practice_sets ps
 		 LEFT JOIN exams e ON e.id = ps.exam_id
 		 LEFT JOIN subjects sub ON sub.id = ps.subject_id
-		 WHERE ps.tenant_id=$1 AND ps.student_id=$2 AND ps.status='finished'
+		 WHERE ps.tenant_id=$1 AND ps.student_id=$2 AND ps.status='finished' AND ps.exam_id IS NOT NULL
 		 ORDER BY ps.finished_at ASC`, tenantID, studentID)
 	if err != nil {
 		return sp, nil
@@ -144,7 +144,7 @@ func (s *Store) StudentProgress(ctx context.Context, tenantID, studentID string)
 	subRows, err := s.pool.Query(ctx,
 		`SELECT sub.name, sub.color, COALESCE(AVG(ps.percent),0)
 		 FROM subjects sub
-		 JOIN practice_sets ps ON ps.subject_id = sub.id AND ps.status='finished'
+		 JOIN practice_sets ps ON ps.subject_id = sub.id AND ps.status='finished' AND ps.exam_id IS NOT NULL
 		 WHERE sub.tenant_id=$1 AND ps.student_id=$2
 		 GROUP BY sub.name, sub.color ORDER BY sub.name`, tenantID, studentID)
 	if err == nil {

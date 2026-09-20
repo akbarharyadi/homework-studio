@@ -172,6 +172,7 @@ func (s *Service) SubmitPractice(ctx context.Context, tenantID, setID string, an
 	if err := s.store.FinishPractice(ctx, ps, score, percent); err != nil {
 		return nil, err
 	}
+	s.store.SaveAttemptAnswers(ctx, setID, details) // persist per-question answers for review
 	return &SubmitResult{Score: score, MaxScore: maxScore, Percent: percent, Details: details}, nil
 }
 

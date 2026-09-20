@@ -131,6 +131,58 @@ export interface PublishedExam {
   question_count: number;
 }
 
+export interface Badge {
+  id: string;
+  name: string;
+  emoji: string;
+  earned: boolean;
+  hint: string;
+}
+export interface Gamification {
+  xp: number;
+  level: number;
+  xp_into_level: number;
+  xp_for_next: number;
+  level_progress: number;
+  streak: number;
+  exams_taken: number;
+  practice_done: number;
+  average: number;
+  best: number;
+  subjects: { subject: string; color: string; average: number }[];
+  badges: Badge[];
+}
+export interface AttemptRow {
+  id: string;
+  title: string;
+  subject: string;
+  kind: "exam" | "practice";
+  percent: number;
+  correct: number;
+  total: number;
+  date: string;
+}
+export interface ReviewItem {
+  question: Question;
+  selected: string;
+  correct: boolean;
+}
+export interface AttemptReview {
+  id: string;
+  title: string;
+  subject: string;
+  percent: number;
+  items: ReviewItem[];
+}
+export interface LeaderRow {
+  rank: number;
+  name: string;
+  xp: number;
+  level: number;
+  streak: number;
+  is_me: boolean;
+}
+
 export interface ClassStats {
   students: number;
   exams_taken: number;
@@ -225,13 +277,22 @@ export const api = {
   adminAutomation: () => request<AdminAutomation>("/admin/automation"),
   runAutomation: () => request<{ reports: number }>("/admin/automation/run", { method: "POST" }),
 
-  // Student — take a published exam + tutor.
+  // Student — take a published exam, practise, review, tutor, gamification.
   publishedExams: () => request<PublishedExam[]>("/exams/published"),
   startExam: (examId: string, student_id: string) =>
     request<{ practice_set_id: string; questions: Question[] }>(`/exams/${examId}/start`, {
       method: "POST",
       body: JSON.stringify({ student_id }),
     }),
+  generatePractice: (student_id: string, subject_id: string, difficulty: string, count = 5) =>
+    request<{ practice_set_id: string; questions: Question[] }>("/practice/generate", {
+      method: "POST",
+      body: JSON.stringify({ student_id, subject_id, difficulty, count }),
+    }),
+  gamification: (studentId: string) => request<Gamification>(`/students/${studentId}/gamification`),
+  attempts: (studentId: string) => request<AttemptRow[]>(`/students/${studentId}/attempts`),
+  attemptReview: (setId: string) => request<AttemptReview>(`/attempts/${setId}/review`),
+  leaderboard: (studentId: string) => request<LeaderRow[]>(`/leaderboard?student_id=${studentId}`),
   submitPractice: (setId: string, answers: Record<string, string>) =>
     request<{ score: number; max_score: number; percent: number; details: any[] }>(
       `/practice/${setId}/submit`,

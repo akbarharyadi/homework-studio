@@ -45,9 +45,9 @@ type AdminStudentRow struct {
 func (s *Store) AdminStudentRows(ctx context.Context, tenantID string) ([]AdminStudentRow, error) {
 	rows, err := s.pool.Query(ctx,
 		`SELECT s.id, s.name, s.grade_level,
-		    COALESCE(AVG(ps.percent) FILTER (WHERE ps.status='finished'), 0) AS avg,
-		    COUNT(ps.id) FILTER (WHERE ps.status='finished') AS done,
-		    COALESCE(to_char(MAX(ps.finished_at), 'YYYY-MM-DD'), '—') AS last
+		    COALESCE(AVG(ps.percent) FILTER (WHERE ps.status='finished' AND ps.exam_id IS NOT NULL), 0) AS avg,
+		    COUNT(ps.id) FILTER (WHERE ps.status='finished' AND ps.exam_id IS NOT NULL) AS done,
+		    COALESCE(to_char(MAX(ps.finished_at) FILTER (WHERE ps.exam_id IS NOT NULL), 'YYYY-MM-DD'), '—') AS last
 		 FROM students s
 		 LEFT JOIN practice_sets ps ON ps.student_id = s.id
 		 WHERE s.tenant_id=$1
