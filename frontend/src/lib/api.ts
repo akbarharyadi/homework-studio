@@ -210,6 +210,37 @@ export interface SubjectVsClass {
   delta: number;
 }
 
+export interface SchoolEngagement {
+  students: number;
+  active_today: number;
+  avg_streak: number;
+  total_xp: number;
+  badges_awarded: number;
+  leaders: LeaderRow[];
+}
+export interface TrendPoint {
+  date: string;
+  avg: number | null;
+  count: number;
+}
+export interface ExamStat {
+  title: string;
+  subject: string;
+  status: string;
+  takers: number;
+  average: number;
+  hardest: string;
+  hardest_pct: number | null;
+}
+export interface TeachingOverview {
+  materials: number;
+  exams_draft: number;
+  exams_review: number;
+  exams_published: number;
+  pending_review: number;
+  exams: ExamStat[];
+}
+
 export interface ClassStats {
   students: number;
   exams_taken: number;
@@ -308,6 +339,9 @@ export const api = {
 
   classStats: () => request<ClassStats>("/dashboard/class"),
   adminOverview: () => request<AdminOverview>("/admin/overview"),
+  adminEngagement: () => request<SchoolEngagement>("/admin/engagement"),
+  adminTrend: () => request<TrendPoint[]>("/admin/trend"),
+  adminTeaching: () => request<TeachingOverview>("/admin/teaching"),
   adminAutomation: () => request<AdminAutomation>("/admin/automation"),
   runAutomation: () => request<{ reports: number }>("/admin/automation/run", { method: "POST" }),
 

@@ -11,6 +11,7 @@ const NAV: Record<string, { to: string; label: string; icon: string; end?: boole
   ],
   admin: [
     { to: "/admin", label: "Overview", icon: "🏫", end: true },
+    { to: "/admin/insights", label: "Insights", icon: "📊" },
     { to: "/admin/automation", label: "Automation", icon: "⚙️" },
     { to: "/teacher/materials", label: "Materials", icon: "📚" },
     { to: "/teacher/exams", label: "Exams", icon: "📝" },

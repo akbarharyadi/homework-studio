@@ -49,6 +49,33 @@ func (h *Handler) AdminAutomation(c *fiber.Ctx) error {
 	})
 }
 
+// AdminEngagement is the school-wide gamification summary.
+func (h *Handler) AdminEngagement(c *fiber.Ctx) error {
+	eng, err := h.store.SchoolEngagement(c.Context(), middleware.TenantID(c))
+	if err != nil {
+		return httpx.Internal(c, "could not load engagement")
+	}
+	return httpx.OK(c, eng)
+}
+
+// AdminTrend is the school average + activity over the last 14 days.
+func (h *Handler) AdminTrend(c *fiber.Ctx) error {
+	pts, err := h.store.SchoolTrend(c.Context(), middleware.TenantID(c), 14)
+	if err != nil {
+		return httpx.Internal(c, "could not load trend")
+	}
+	return httpx.OK(c, pts)
+}
+
+// AdminTeaching is the content pipeline + per-exam analytics.
+func (h *Handler) AdminTeaching(c *fiber.Ctx) error {
+	t, err := h.store.TeachingOverview(c.Context(), middleware.TenantID(c))
+	if err != nil {
+		return httpx.Internal(c, "could not load teaching overview")
+	}
+	return httpx.OK(c, t)
+}
+
 // RunAutomation triggers the scheduler's job immediately (the "Run now" button).
 func (h *Handler) RunAutomation(c *fiber.Ctx) error {
 	if h.scheduler == nil {

@@ -26,6 +26,12 @@ func (s *Store) SetExamStatus(ctx context.Context, id, status string) {
 	_, _ = s.pool.Exec(ctx, `UPDATE exams SET status=$2 WHERE id=$1`, id, status)
 }
 
+// ExamApprovedQuestions returns an exam's approved questions (used by the seed to
+// snapshot reviewable attempts).
+func (s *Store) ExamApprovedQuestions(ctx context.Context, examID string) ([]domain.Question, error) {
+	return s.examQuestions(ctx, examID, true)
+}
+
 // GetExam returns an exam and its questions (with answers — for the teacher's review).
 func (s *Store) GetExam(ctx context.Context, tenantID, id string) (*domain.Exam, []domain.Question, error) {
 	e := &domain.Exam{}

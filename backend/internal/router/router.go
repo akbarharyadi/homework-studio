@@ -65,6 +65,9 @@ func Setup(app *fiber.App, h *handler.Handler, authMgr *auth.Manager) {
 	// Admin monitoring + automation.
 	admin := authed.Group("/admin", middleware.RequireRole(domain.RoleAdmin))
 	admin.Get("/overview", h.AdminOverview)
+	admin.Get("/engagement", h.AdminEngagement)
+	admin.Get("/trend", h.AdminTrend)
+	admin.Get("/teaching", h.AdminTeaching)
 	admin.Get("/automation", h.AdminAutomation)
 	admin.Post("/automation/run", h.RunAutomation)
 }

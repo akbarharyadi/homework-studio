@@ -5,7 +5,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log"
+	"math"
 
 	"homework-studio/internal/auth"
 	"homework-studio/internal/config"
@@ -260,22 +262,60 @@ func seedMaterialWithDraftExam(ctx context.Context, st *store.Store, tenantID, t
 	}
 }
 
-// seedAttempt records a finished exam attempt with a score, N days ago.
+// seedAttempt records a finished exam attempt N days ago — snapshotting the exam's
+// questions + per-question answers so it's reviewable and feeds the analytics.
 func seedAttempt(ctx context.Context, st *store.Store, tenantID, studentID, subjectID, examID string, percent float64, daysAgo int) {
-	_, err := st.Pool().Exec(ctx,
-		`INSERT INTO practice_sets (id, tenant_id, student_id, subject_id, status, score, percent, snapshot, exam_id, finished_at)
-		 VALUES ($1,$2,$3,$4,'finished',$5,$6,'[]',$7, now() - make_interval(days => $8))`,
-		domain.NewID(), tenantID, studentID, subjectID, percent/20, percent, examID, daysAgo)
-	must(err)
+	qs, _ := st.ExamApprovedQuestions(ctx, examID)
+	eid := examID
+	seedFinishedSet(ctx, st, tenantID, studentID, subjectID, &eid, qs, percent, daysAgo)
 }
 
 // seedPractice records a finished, ungraded practice attempt (exam_id NULL).
 func seedPractice(ctx context.Context, st *store.Store, tenantID, studentID, subjectID string, percent float64, daysAgo int) {
+	qs, _ := st.ListQuestions(ctx, tenantID, subjectID, "", 5)
+	seedFinishedSet(ctx, st, tenantID, studentID, subjectID, nil, qs, percent, daysAgo)
+}
+
+// seedFinishedSet writes a finished practice_set with a reviewable snapshot: the
+// first ~percent of questions are marked correct, the rest wrong (so a consistent
+// last question reads as the "hardest").
+func seedFinishedSet(ctx context.Context, st *store.Store, tenantID, studentID, subjectID string, examID *string, qs []domain.Question, percent float64, daysAgo int) {
+	total := len(qs)
+	setID := domain.NewID()
+	snap, _ := json.Marshal(qs)
+	correct := int(math.Round(percent / 100 * float64(total)))
+	actualPct := percent
+	if total > 0 {
+		actualPct = float64(correct) / float64(total) * 100
+	}
 	_, err := st.Pool().Exec(ctx,
-		`INSERT INTO practice_sets (id, tenant_id, student_id, subject_id, status, score, percent, snapshot, finished_at)
-		 VALUES ($1,$2,$3,$4,'finished',$5,$6,'[]', now() - make_interval(days => $7))`,
-		domain.NewID(), tenantID, studentID, subjectID, percent/20, percent, daysAgo)
+		`INSERT INTO practice_sets (id, tenant_id, student_id, subject_id, status, score, percent, snapshot, exam_id, finished_at)
+		 VALUES ($1,$2,$3,$4,'finished',$5,$6,$7,$8, now() - make_interval(days => $9))`,
+		setID, tenantID, studentID, subjectID, float64(correct), actualPct, snap, examID, daysAgo)
 	must(err)
+	for i, q := range qs {
+		ok := i < correct
+		sel := q.Answer
+		marks := 1.0
+		if !ok {
+			sel = otherOption(q)
+			marks = 0
+		}
+		_, aerr := st.Pool().Exec(ctx,
+			`INSERT INTO practice_answers (id, practice_set_id, question_id, selected, is_correct, marks)
+			 VALUES ($1,$2,$3,$4,$5,$6)`,
+			domain.NewID(), setID, q.ID, sel, ok, marks)
+		must(aerr)
+	}
+}
+
+func otherOption(q domain.Question) string {
+	for _, o := range q.Options {
+		if o != q.Answer {
+			return o
+		}
+	}
+	return ""
 }
 
 var fractionFacts = []string{
