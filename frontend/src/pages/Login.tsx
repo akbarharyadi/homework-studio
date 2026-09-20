@@ -4,7 +4,7 @@ import { useAuth } from "../lib/auth";
 import { Button, Card, Input } from "../components/ui";
 import type { Role } from "../lib/api";
 
-const HOME: Record<Role, string> = { admin: "/teacher", teacher: "/teacher", parent: "/parent", student: "/student" };
+const HOME: Record<Role, string> = { admin: "/admin", teacher: "/teacher", parent: "/parent", student: "/student" };
 
 const ROLES = [
   { role: "Teacher", email: "teacher@demo.id", icon: "🧑‍🏫", blurb: "Upload homework, watch it grade itself, and review anything unclear." },

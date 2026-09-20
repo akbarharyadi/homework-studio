@@ -57,7 +57,7 @@ export function AdminAutomationPage() {
         {/* Scheduler status */}
         <Card spine="grow" className="lg:col-span-2">
           <CardBody>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-3">
                 <span className="relative flex h-3.5 w-3.5">
                   {a.enabled && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-grow opacity-60" />}

@@ -52,7 +52,7 @@ export function StudentPractice() {
             <div className="text-5xl">✏️</div>
             <h3 className="mt-3 font-display text-xl font-semibold text-ink">Ready to practise?</h3>
             <p className="mt-1 text-sm text-ink-soft">Pick a subject and we'll make you 5 questions.</p>
-            <div className="mt-5 flex items-center gap-3">
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
               <Select value={subjectId} onChange={(e) => setSubjectId(e.target.value)}>
                 {subjects.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}
               </Select>

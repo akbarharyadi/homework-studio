@@ -112,7 +112,7 @@ homework so teachers stay in control of a child's grade.
 | Layer | Choice |
 |---|---|
 | **Backend** | **Go + Fiber v2**, **pgx** with plain SQL (**no ORM**), `golang-jwt`, embedded SQL migrations |
-| **Frontend** | **Vite + React + TypeScript + Tailwind** (SPA), Recharts, react-dropzone, react-markdown + KaTeX |
+| **Frontend** | **Vite + React + TypeScript + Tailwind** (SPA), Recharts, react-dropzone, react-markdown + KaTeX; **responsive down to phone width** and an installable **PWA** (offline app shell via a service worker) |
 | **Database** | **PostgreSQL** (self-hosted; Supabase-compatible — Supabase *is* managed Postgres) |
 | **AI** | Mock by default (free). **GLM** for the tutor + a **vision reader** that reads the homework photo; **`jev` (TypeAI)** for classification. All OpenAI-compatible and swappable |
 | **Automation** | Async ingest pipeline (upload → gate, hands-off) + a **background scheduler** that auto-generates each student's weekly report and recap-video data |
