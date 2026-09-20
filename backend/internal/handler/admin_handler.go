@@ -31,12 +31,58 @@ func (h *Handler) AdminOverview(c *fiber.Ctx) error {
 	})
 }
 
-// AdminAutomation shows the background scheduler + AI status and a live feed of
-// what it has produced — the UI's window onto the automation.
+// AdminAutomation is the automation jobs dashboard: every automated job the
+// platform runs (trigger, schedule, how many times it has fired), the AI models
+// doing the work, and a live feed of what the automation most recently did.
 func (h *Handler) AdminAutomation(c *fiber.Ctx) error {
 	tid := middleware.TenantID(c)
 	ctx := c.Context()
 	events, _ := h.store.RecentEvents(ctx, tid, 15)
+
+	every := "every " + h.cfg.SchedulerInterval
+	schedStatus := "paused"
+	if h.cfg.SchedulerEnabled {
+		schedStatus = "running"
+	}
+
+	jobs := []fiber.Map{
+		{
+			"key": "material_exam", "icon": "📄", "name": "Material → exam",
+			"trigger": "event", "schedule": "when a teacher uploads material",
+			"count": h.store.CountGeneratedExams(ctx, tid), "unit": "exams generated",
+			"status": "active",
+			"detail": "Reads the file, then writes an exam, teaching notes and tutor knowledge from it.",
+		},
+		{
+			"key": "auto_publish", "icon": "🚀", "name": "Auto-publish clean exams",
+			"trigger": "event", "schedule": "after an exam is generated",
+			"count": h.store.CountPublishedExams(ctx, tid), "unit": "exams published",
+			"status": "active",
+			"detail": "An exam with no low-confidence question publishes itself — the teacher only reviews flagged ones.",
+		},
+		{
+			"key": "weekly_reports", "icon": "📊", "name": "Progress reports",
+			"trigger": "scheduled", "schedule": every,
+			"count": h.store.CountReports(ctx, tid), "unit": "reports written",
+			"status": schedStatus,
+			"detail": "Turns each child's attempts into a warm progress report and recap-video data.",
+		},
+		{
+			"key": "at_risk", "icon": "🚩", "name": "At-risk flagging",
+			"trigger": "scheduled", "schedule": every,
+			"count": h.store.CountEventsByKind(ctx, tid, "alert"), "unit": "students flagged",
+			"status": schedStatus,
+			"detail": "Surfaces students under 65% so support reaches them early.",
+		},
+		{
+			"key": "remediation", "icon": "🎯", "name": "Auto-remediation",
+			"trigger": "scheduled", "schedule": every,
+			"count": h.store.CountRemediationSets(ctx, tid), "unit": "practice sets built",
+			"status": schedStatus,
+			"detail": "Each flagged student gets a targeted practice set in their weakest subject.",
+		},
+	}
+
 	return httpx.OK(c, fiber.Map{
 		"enabled":           h.cfg.SchedulerEnabled,
 		"interval":          h.cfg.SchedulerInterval,
@@ -45,6 +91,9 @@ func (h *Handler) AdminAutomation(c *fiber.Ctx) error {
 		"flags":             h.store.CountEventsByKind(ctx, tid, "alert"),
 		"vision_reader":     h.cfg.VisionProvider,
 		"tutor_provider":    h.cfg.AIProvider,
+		"ai_model":          h.cfg.AIModel,
+		"vision_model":      h.cfg.VisionModel,
+		"jobs":              jobs,
 		"events":            events,
 	})
 }

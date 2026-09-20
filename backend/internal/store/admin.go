@@ -20,6 +20,22 @@ func (s *Store) CountReports(ctx context.Context, tenantID string) int {
 	return n
 }
 
+// CountGeneratedExams counts exams the AI produced from uploaded material.
+func (s *Store) CountGeneratedExams(ctx context.Context, tenantID string) int {
+	var n int
+	_ = s.pool.QueryRow(ctx,
+		`SELECT COUNT(*) FROM exams WHERE tenant_id=$1 AND material_id IS NOT NULL`, tenantID).Scan(&n)
+	return n
+}
+
+// CountPublishedExams counts exams that reached students (auto- or teacher-published).
+func (s *Store) CountPublishedExams(ctx context.Context, tenantID string) int {
+	var n int
+	_ = s.pool.QueryRow(ctx,
+		`SELECT COUNT(*) FROM exams WHERE tenant_id=$1 AND status='published'`, tenantID).Scan(&n)
+	return n
+}
+
 // LastReportTime returns the most recent report generation time (empty if none).
 func (s *Store) LastReportTime(ctx context.Context, tenantID string) string {
 	var t *string

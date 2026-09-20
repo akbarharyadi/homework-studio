@@ -126,6 +126,14 @@ func (sc *Scheduler) RunOnce(ctx context.Context) (int, error) {
 		if done > 0 && prog.OverallAverage < 65 {
 			sc.store.InsertEvent(ctx, ref.TenantID, "alert", ref.ID,
 				fmt.Sprintf("Flagged %s for extra support · %.0f%%", prog.StudentName, prog.OverallAverage), prog.OverallAverage)
+
+			// Auto-remediation: build a targeted practice set in the student's
+			// weakest subject (idempotent — reuses one they haven't taken yet).
+			if sid, sname, _, _, ok := sc.store.WeakestSubject(ctx, ref.TenantID, ref.ID); ok && sid != "" {
+				sc.store.EnsureRemediationSet(ctx, ref.TenantID, ref.ID, sid)
+				sc.store.InsertEvent(ctx, ref.TenantID, "remediation", ref.ID,
+					fmt.Sprintf("Built %s a targeted %s practice set", firstName(prog.StudentName), sname), 0)
+			}
 		}
 	}
 	return count, nil
@@ -139,11 +147,15 @@ func (sc *Scheduler) writeRecap(studentID string, data []byte) {
 	_ = os.WriteFile(filepath.Join(dir, studentID+".json"), data, 0o644)
 }
 
-func narrative(name string, done int, avg float64, top string) string {
-	first := name
+func firstName(name string) string {
 	if i := strings.IndexByte(name, ' '); i > 0 {
-		first = name[:i]
+		return name[:i]
 	}
+	return name
+}
+
+func narrative(name string, done int, avg float64, top string) string {
+	first := firstName(name)
 	s := fmt.Sprintf("%s completed %d exam", first, done)
 	if done != 1 {
 		s += "s"

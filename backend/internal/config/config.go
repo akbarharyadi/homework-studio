@@ -21,20 +21,14 @@ type Config struct {
 
 	StorageDir string
 
-	// Primary AI provider (extraction fallback + tutor generation).
+	// Primary AI provider — authors exams + teaching notes + tutor replies.
+	// GLM (Z.AI coding plan) by default; any OpenAI-compatible provider drops in.
 	AIProvider string
 	AIKey      string
 	AIBaseURL  string
 	AIModel    string
 
-	// Classifier provider — defaults to jev/TypeAI when configured.
-	// Used to identify subject/worksheet type and sanity-check answers.
-	ClassifierProvider string
-	ClassifierKey      string
-	ClassifierBaseURL  string
-	ClassifierModel    string
-
-	// Vision provider — reads the homework image (GLM vision by default when on).
+	// Vision provider — transcribes the uploaded material (GLM vision by default).
 	// Key/BaseURL fall back to the primary AI_* creds (same GLM plan).
 	VisionProvider string
 	VisionKey      string
@@ -65,20 +59,15 @@ func Load() *Config {
 
 		StorageDir: env("STORAGE_DIR", "./storage"),
 
-		AIProvider: env("AI_PROVIDER", "mock"),
+		AIProvider: env("AI_PROVIDER", "glm"),
 		AIKey:      env("AI_API_KEY", ""),
-		AIBaseURL:  env("AI_BASE_URL", ""),
-		AIModel:    env("AI_MODEL", ""),
+		AIBaseURL:  env("AI_BASE_URL", "https://api.z.ai/api/coding/paas/v4"),
+		AIModel:    env("AI_MODEL", "glm-5.3"),
 
-		ClassifierProvider: env("CLASSIFIER_PROVIDER", "mock"),
-		ClassifierKey:      env("CLASSIFIER_API_KEY", ""),
-		ClassifierBaseURL:  env("CLASSIFIER_BASE_URL", "https://api.typeai.co/v1"),
-		ClassifierModel:    env("CLASSIFIER_MODEL", "jev"),
-
-		VisionProvider: env("VISION_PROVIDER", "mock"),
+		VisionProvider: env("VISION_PROVIDER", "glm"),
 		VisionKey:      env("VISION_API_KEY", env("AI_API_KEY", "")),
-		VisionBaseURL:  env("VISION_BASE_URL", env("AI_BASE_URL", "")),
-		VisionModel:    env("VISION_MODEL", "glm-4v-flash"),
+		VisionBaseURL:  env("VISION_BASE_URL", env("AI_BASE_URL", "https://api.z.ai/api/coding/paas/v4")),
+		VisionModel:    env("VISION_MODEL", "glm-5.3-flash"),
 
 		SchedulerEnabled:  env("SCHEDULER_ENABLED", "true") == "true",
 		SchedulerInterval: env("SCHEDULER_INTERVAL", "6h"),

@@ -31,6 +31,7 @@ func Setup(app *fiber.App, h *handler.Handler, authMgr *auth.Manager) {
 	authed.Get("/students/:id/attempts", h.ListAttempts)
 	authed.Get("/students/:id/vs-class", h.CompareToClass)
 	authed.Get("/students/:id/tip", h.ParentTip)
+	authed.Get("/students/:id/recommended", h.RecommendedSets)
 	authed.Get("/attempts/:id/review", h.AttemptReview)
 	authed.Get("/leaderboard", h.Leaderboard)
 
@@ -46,6 +47,7 @@ func Setup(app *fiber.App, h *handler.Handler, authMgr *auth.Manager) {
 	authed.Get("/exams/published", h.ListPublishedExams)
 	authed.Post("/exams/:id/start", h.StartExam)
 	authed.Post("/practice/generate", h.GeneratePractice)
+	authed.Get("/practice/:id", h.ResumePractice)
 	authed.Post("/practice/:id/submit", h.SubmitPractice)
 	authed.Get("/questions/:id/explain", h.ExplainQuestion)
 	authed.Post("/tutor/chat", h.TutorChat)

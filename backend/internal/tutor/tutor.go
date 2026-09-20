@@ -1,7 +1,8 @@
 // Package tutor implements the AI tutor: step-by-step explanations, a per-student
 // practice generator, grading, and a RAG chat. Logic is adapted from ai-cbt
-// (practice scoring, cached LaTeX explanations, stratified generation). It runs
-// fully on the mock provider (no key) and upgrades to DeepSeek/GLM/TypeAI via env.
+// (practice scoring, cached LaTeX explanations, stratified generation). It runs on
+// GLM (Z.AI coding plan) by default; any OpenAI-compatible provider drops in. With
+// no key configured it degrades gracefully rather than fabricating answers.
 package tutor
 
 import (
@@ -25,8 +26,8 @@ func New(client *ai.Client, s *store.Store) *Service {
 	return &Service{client: client, store: s}
 }
 
-// Explain returns a step-by-step, LaTeX-friendly walkthrough of a question.
-// Bank explanations are free; otherwise ask the LLM, or fall back to mock.
+// Explain returns a step-by-step, LaTeX-friendly walkthrough of a question. A
+// stored explanation is returned as-is; otherwise GLM writes one live.
 func (s *Service) Explain(ctx context.Context, tenantID string, studentID *string, questionID string) (string, error) {
 	q, err := s.store.GetQuestion(ctx, questionID)
 	if err != nil {
@@ -51,21 +52,12 @@ func (s *Service) Explain(ctx context.Context, tenantID string, studentID *strin
 			return out, nil
 		}
 	}
-	return mockExplanation(q), nil
-}
-
-func mockExplanation(q *domain.Question) string {
-	var b strings.Builder
-	b.WriteString("Let's work it out together! 🙂\n\n")
-	b.WriteString("**Question:** " + q.Stem + "\n\n")
-	b.WriteString("**Step 1 — Read carefully.** Underline what is being asked.\n")
-	b.WriteString("**Step 2 — Think about what you know** that connects to it.\n")
-	b.WriteString("**Step 3 — Solve one small piece at a time.**\n")
+	// No stored explanation and GLM unavailable: reveal the answer honestly rather
+	// than fabricate a walkthrough.
 	if q.Answer != "" {
-		b.WriteString(fmt.Sprintf("\n**Answer:** %s\n", q.Answer))
+		return fmt.Sprintf("**Answer:** %s\n\nWork back from the answer: which step gets you there? 🙂", q.Answer), nil
 	}
-	b.WriteString("\n_Great effort — try the next one!_")
-	return b.String()
+	return "", fmt.Errorf("no explanation available")
 }
 
 // GenerateExam produces `count` multiple-choice questions grounded in the teacher's
@@ -202,7 +194,8 @@ func (s *Service) SubmitPractice(ctx context.Context, tenantID, setID string, an
 }
 
 // Chat answers a student's question, grounded in the subject's material via a
-// simple lexical retrieval (pgvector-ready). Falls back to mock without a key.
+// simple lexical retrieval (pgvector-ready). Without a key it returns the retrieved
+// material (or a short nudge) rather than a fabricated answer.
 func (s *Service) Chat(ctx context.Context, tenantID, studentID, subjectID, message string) (string, error) {
 	context1 := s.retrieve(ctx, tenantID, subjectID, message, 3)
 	if s.client.Enabled() {

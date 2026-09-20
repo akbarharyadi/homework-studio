@@ -287,11 +287,22 @@ export interface AdminOverview {
   students_rows: AdminStudentRow[];
 }
 export interface AutomationEvent {
-  kind: "report" | "alert";
+  kind: "report" | "alert" | "remediation" | "publish";
   student_name: string;
   message: string;
   value: number;
   created_at: string;
+}
+export interface AutomationJob {
+  key: string;
+  icon: string;
+  name: string;
+  trigger: "event" | "scheduled";
+  schedule: string;
+  count: number;
+  unit: string;
+  status: "active" | "running" | "paused";
+  detail: string;
 }
 export interface AdminAutomation {
   enabled: boolean;
@@ -301,7 +312,18 @@ export interface AdminAutomation {
   flags: number;
   vision_reader: string;
   tutor_provider: string;
+  ai_model: string;
+  vision_model: string;
+  jobs: AutomationJob[];
   events: AutomationEvent[];
+}
+
+export interface RecommendedSet {
+  id: string;
+  subject: string;
+  color: string;
+  count: number;
+  reason: string;
 }
 
 // ---- Endpoints ----
@@ -358,6 +380,9 @@ export const api = {
       body: JSON.stringify({ student_id, subject_id, difficulty, count }),
     }),
   gamification: (studentId: string) => request<Gamification>(`/students/${studentId}/gamification`),
+  recommendedSets: (studentId: string) => request<RecommendedSet[]>(`/students/${studentId}/recommended`),
+  resumePractice: (setId: string) =>
+    request<{ practice_set_id: string; questions: Question[] }>(`/practice/${setId}`),
   attempts: (studentId: string) => request<AttemptRow[]>(`/students/${studentId}/attempts`),
   attemptReview: (setId: string) => request<AttemptReview>(`/attempts/${setId}/review`),
   leaderboard: (studentId: string) => request<LeaderRow[]>(`/leaderboard?student_id=${studentId}`),

@@ -23,15 +23,15 @@ services:
       STORAGE_DIR: /app/storage
       FRONTEND_ORIGIN: http://localhost:3000
       SECRET_KEY: dev-secret-change-me
-      # AI: defaults to mock (free). Put real GLM creds in docker/.env (gitignored)
-      # to activate — see docker/.env.example.
-      AI_PROVIDER: ${AI_PROVIDER:-mock}
+      # AI runs on GLM. Put your Z.AI coding-plan key in docker/.env (gitignored)
+      # as AI_API_KEY — see docker/.env.example. Without a key the app still boots,
+      # but exam generation / tutor / material reading won't work.
+      AI_PROVIDER: ${AI_PROVIDER:-glm}
       AI_API_KEY: ${AI_API_KEY:-}
-      AI_BASE_URL: ${AI_BASE_URL:-}
-      AI_MODEL: ${AI_MODEL:-}
-      VISION_PROVIDER: ${VISION_PROVIDER:-mock}
+      AI_BASE_URL: ${AI_BASE_URL:-https://api.z.ai/api/coding/paas/v4}
+      AI_MODEL: ${AI_MODEL:-glm-5.3}
+      VISION_PROVIDER: ${VISION_PROVIDER:-glm}
       VISION_MODEL: ${VISION_MODEL:-glm-5.3-flash}
-      CLASSIFIER_PROVIDER: ${CLASSIFIER_PROVIDER:-mock}
       SCHEDULER_ENABLED: ${SCHEDULER_ENABLED:-true}
       REVIEW_CONFIDENCE_THRESHOLD: "0.80"
     ports:

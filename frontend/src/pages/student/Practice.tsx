@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { api, type Subject, type Question } from "../../lib/api";
 import { Button, Card, CardBody, PageTitle, Select } from "../../components/ui";
 import { QuizRunner } from "../../components/QuizRunner";
@@ -15,14 +16,28 @@ export function StudentPractice() {
   const [subjectId, setSubjectId] = useState("");
   const [difficulty, setDifficulty] = useState("");
   const [studentId, setStudentId] = useState("");
-  const [active, setActive] = useState<{ setId: string; questions: Question[] } | null>(null);
+  const [active, setActive] = useState<{ setId: string; questions: Question[]; coach?: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [params, setParams] = useSearchParams();
+  const recommendedSetId = params.get("set");
 
   useEffect(() => {
     api.subjects().then((s) => { setSubjects(s); if (s[0]) setSubjectId(s[0].id); });
     api.students().then((s) => s[0] && setStudentId(s[0].id));
   }, []);
+
+  // Arriving from a coach recommendation (?set=…): load that set and start it.
+  useEffect(() => {
+    if (!recommendedSetId) return;
+    let cancelled = false;
+    api
+      .resumePractice(recommendedSetId)
+      .then((r) => { if (!cancelled) setActive({ setId: r.practice_set_id, questions: r.questions, coach: true }); })
+      .catch(() => { if (!cancelled) setError("That practice set isn't available anymore — start a fresh one below."); })
+      .finally(() => { if (!cancelled) setParams({}, { replace: true }); });
+    return () => { cancelled = true; };
+  }, [recommendedSetId]);
 
   async function start() {
     if (!subjectId || !studentId) return;
@@ -42,8 +57,10 @@ export function StudentPractice() {
     return (
       <div className="mx-auto max-w-2xl">
         <PageTitle
-          title="Practice"
-          subtitle="Low-stakes — this earns XP and keeps your streak, but isn't counted in your grades."
+          title={active.coach ? "🎯 Coach-recommended practice" : "Practice"}
+          subtitle={active.coach
+            ? "Your coach set this to help you get stronger. Earns XP and keeps your streak — not counted in your grades."
+            : "Low-stakes — this earns XP and keeps your streak, but isn't counted in your grades."}
           action={<Button variant="outline" size="sm" onClick={() => setActive(null)}>← Back</Button>}
         />
         <QuizRunner

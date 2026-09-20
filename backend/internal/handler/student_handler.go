@@ -62,6 +62,29 @@ func (h *Handler) GeneratePractice(c *fiber.Ctx) error {
 	return httpx.Created(c, fiber.Map{"practice_set_id": ps.ID, "questions": questions})
 }
 
+// RecommendedSets lists a student's open, coach-recommended (auto-remediation)
+// practice sets — surfaced on the student home.
+func (h *Handler) RecommendedSets(c *fiber.Ctx) error {
+	rows, err := h.store.OpenRemediationSets(c.Context(), middleware.TenantID(c), c.Params("id"))
+	if err != nil {
+		return httpx.Internal(c, "could not load recommendations")
+	}
+	return httpx.OK(c, rows)
+}
+
+// ResumePractice loads an open practice set's questions so the student can take a
+// set that was created for them (e.g. a coach-recommended remediation set).
+func (h *Handler) ResumePractice(c *fiber.Ctx) error {
+	ps, questions, err := h.store.GetOpenSet(c.Context(), middleware.TenantID(c), c.Params("id"))
+	if err != nil {
+		return httpx.NotFound(c, "practice set not found")
+	}
+	if ps.Status != "open" {
+		return httpx.BadRequest(c, "this practice set is already finished")
+	}
+	return httpx.OK(c, fiber.Map{"practice_set_id": ps.ID, "questions": questions})
+}
+
 // Leaderboard ranks the class by XP.
 func (h *Handler) Leaderboard(c *fiber.Ctx) error {
 	rows, err := h.store.Leaderboard(c.Context(), middleware.TenantID(c), c.Query("student_id"))

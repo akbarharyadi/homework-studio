@@ -1,8 +1,8 @@
 // Command api is the Homework Studio HTTP server.
 //
 // Wiring: config -> pgx pool + migrate -> store -> (auth, AI clients, vision,
-// pipeline, tutor) -> Fiber app + routes. AI runs on the mock provider unless a
-// key is set; classification uses jev/TypeAI when CLASSIFIER_PROVIDER != mock.
+// coursework, tutor) -> Fiber app + routes. The AI runs on GLM (Z.AI coding plan)
+// by default; set AI_API_KEY (see docker/.env) to enable it.
 package main
 
 import (

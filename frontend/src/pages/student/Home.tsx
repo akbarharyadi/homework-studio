@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, type Gamification, type LeaderRow, type AttemptRow } from "../../lib/api";
+import { api, type Gamification, type LeaderRow, type AttemptRow, type RecommendedSet } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { subjectEmoji } from "../../lib/subjects";
 import { Button, Card, CardBody, PageTitle, Spinner, Meter, Badge } from "../../components/ui";
@@ -32,6 +32,7 @@ export function StudentHome() {
   const [g, setG] = useState<Gamification | null>(null);
   const [board, setBoard] = useState<LeaderRow[]>([]);
   const [recent, setRecent] = useState<AttemptRow[]>([]);
+  const [recommended, setRecommended] = useState<RecommendedSet[]>([]);
 
   useEffect(() => {
     api.students().then((s) => {
@@ -40,6 +41,7 @@ export function StudentHome() {
       api.gamification(id).then(setG);
       api.leaderboard(id).then(setBoard).catch(() => {});
       api.attempts(id).then((a) => setRecent(a.slice(0, 4))).catch(() => {});
+      api.recommendedSets(id).then(setRecommended).catch(() => {});
     });
   }, []);
 
@@ -90,6 +92,33 @@ export function StudentHome() {
           </CardBody>
         </Card>
       </div>
+
+      {/* Coach-recommended practice (auto-remediation) */}
+      {recommended.length > 0 && (
+        <Card spine="flag" className="mt-6">
+          <CardBody>
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🎯</span>
+              <h3 className="text-lg font-semibold text-ink">Recommended for you</h3>
+              <Badge tone="flag">from your coach</Badge>
+            </div>
+            <p className="mt-1 text-sm text-ink-soft">
+              We noticed a subject you can get stronger in — here's a quick set made just for you.
+            </p>
+            <div className="mt-4 space-y-2">
+              {recommended.map((r) => (
+                <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-paper p-3">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-ink">{subjectEmoji(r.subject)} {r.subject} practice</div>
+                    <div className="text-sm text-ink-soft">{r.count} questions · earns XP, not graded</div>
+                  </div>
+                  <Link to={`/student/practice?set=${r.id}`}><Button>Start now</Button></Link>
+                </div>
+              ))}
+            </div>
+          </CardBody>
+        </Card>
+      )}
 
       {/* Badges */}
       <Card className="mt-6">

@@ -96,11 +96,15 @@ func (p *Pipeline) Run(ctx context.Context, m *domain.Material, subjectName stri
 		_ = p.store.CreateQuestion(ctx, &qs[i])
 	}
 
-	status := domain.ExamDraft
+	// Automation: an exam with no low-confidence questions publishes itself; anything
+	// flagged waits for the teacher.
 	if flagged > 0 {
-		status = domain.ExamNeedsReview
+		p.store.SetExamStatus(ctx, exam.ID, domain.ExamNeedsReview)
+	} else {
+		_ = p.store.PublishExam(ctx, m.TenantID, exam.ID)
+		p.store.InsertEvent(ctx, m.TenantID, "publish", "",
+			fmt.Sprintf("Auto-published “%s” · %d questions", exam.Title, len(qs)), 0)
 	}
-	p.store.SetExamStatus(ctx, exam.ID, status)
 	p.store.SetMaterialStatus(ctx, m.ID, domain.MaterialReady)
 	return nil
 }
