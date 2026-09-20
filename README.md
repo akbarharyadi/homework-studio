@@ -14,6 +14,13 @@ with a single `docker compose up`.
 |---|---|---|
 | ![Login](docs/screenshots/login.jpg) | ![Dashboard](docs/screenshots/teacher-dashboard.jpg) | ![Parent](docs/screenshots/parent-progress.jpg) |
 
+**Videos** (rendered from code with Remotion — see [`video/`](video/)):
+a product **walkthrough** and a data-driven **per-student recap**.
+
+| Walkthrough (`video/out/walkthrough.mp4`) | Per-student recap (`video/out/recap.mp4`) |
+|---|---|
+| ![Walkthrough](docs/screenshots/walkthrough-frame.jpg) | ![Recap](docs/screenshots/recap-frame.jpg) |
+
 ---
 
 ## What it does
