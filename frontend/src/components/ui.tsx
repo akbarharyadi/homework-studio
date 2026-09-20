@@ -117,6 +117,7 @@ export function StatusBadge({ status }: { status: string }) {
     processing: { tone: "info", label: "Reading…" },
     needs_review: { tone: "flag", label: "Needs review" },
     graded: { tone: "grow", label: "Graded" },
+    finished: { tone: "grow", label: "Done" },
     failed: { tone: "slate", label: "Failed" },
   };
   const s = map[status] || { tone: "slate" as Tone, label: status };

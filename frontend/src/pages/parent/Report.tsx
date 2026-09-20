@@ -40,7 +40,7 @@ export function ParentReport() {
         <p className="text-sm text-ink-soft">{p.grade_level}</p>
 
         <p className="mt-5 leading-relaxed text-ink">
-          {first} has completed <b>{p.timeline.length}</b> homework{p.timeline.length === 1 ? "" : "s"} with an overall
+          {first} has completed <b>{p.timeline.length}</b> exam{p.timeline.length === 1 ? "" : "s"} with an overall
           average of <b>{p.overall_average.toFixed(0)}%</b>.
           {best && ` Strongest in ${best.subject} (${best.average.toFixed(0)}%).`}
           {focus && best && focus.subject !== best.subject && ` A good area to keep practising is ${focus.subject}.`} Keep
@@ -50,7 +50,7 @@ export function ParentReport() {
         <div className="mt-6 grid grid-cols-3 gap-4">
           {[
             { v: `${p.overall_average.toFixed(0)}%`, l: "Overall average", c: "text-brand-ink" },
-            { v: `${p.timeline.length}`, l: "Homeworks done", c: "text-grow" },
+            { v: `${p.timeline.length}`, l: "Exams taken", c: "text-grow" },
             { v: best ? best.subject : "—", l: "Top subject", c: "text-ink" },
           ].map((s) => (
             <div key={s.l} className="rounded-xl bg-paper p-4 text-center">
@@ -73,7 +73,7 @@ export function ParentReport() {
           ))}
         </div>
 
-        <h2 className="mb-2 mt-8 text-lg font-semibold text-ink">Homework history</h2>
+        <h2 className="mb-2 mt-8 text-lg font-semibold text-ink">Exam history</h2>
         <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -83,7 +83,7 @@ export function ParentReport() {
           </thead>
           <tbody>
             {p.timeline.map((t) => (
-              <tr key={t.homework_id} className="border-b border-line/60">
+              <tr key={t.id} className="border-b border-line/60">
                 <td className="py-1.5 text-ink-soft">{t.date}</td>
                 <td className="text-ink">{t.title}</td>
                 <td className="text-ink-soft">{t.subject}</td>

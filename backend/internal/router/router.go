@@ -31,31 +31,29 @@ func Setup(app *fiber.App, h *handler.Handler, authMgr *auth.Manager) {
 	// Auto-generated weekly report (produced by the background scheduler).
 	authed.Get("/reports/student/:id", h.LatestStudentReport)
 
-	// Homework.
-	authed.Get("/homeworks", h.ListHomeworks)
-	authed.Get("/homeworks/:id", h.GetHomework)
-	authed.Get("/homeworks/:id/status", h.HomeworkStatus)
-	authed.Post("/homeworks",
-		middleware.RequireRole(domain.RoleTeacher, domain.RoleAdmin), h.UploadHomework)
+	// Student — take a published exam, get explanations, chat with the tutor.
+	// (Register the static /exams/published before the teacher's /exams/:id.)
+	authed.Get("/exams/published", h.ListPublishedExams)
+	authed.Post("/exams/:id/start", h.StartExam)
+	authed.Post("/practice/:id/submit", h.SubmitPractice)
+	authed.Get("/questions/:id/explain", h.ExplainQuestion)
+	authed.Post("/tutor/chat", h.TutorChat)
 
-	// Teacher review queue.
-	review := authed.Group("/review", middleware.RequireRole(domain.RoleTeacher, domain.RoleAdmin))
-	review.Get("/tasks", h.ListReviewTasks)
-	review.Post("/tasks/:id/resolve", h.ResolveReviewTask)
-
-	// Teacher dashboard.
-	authed.Get("/dashboard/class",
-		middleware.RequireRole(domain.RoleTeacher, domain.RoleAdmin), h.ClassStats)
+	// Teacher / admin — teaching material + the exams the AI generates from it.
+	teach := authed.Group("", middleware.RequireRole(domain.RoleTeacher, domain.RoleAdmin))
+	teach.Post("/materials", h.UploadMaterial)
+	teach.Get("/materials", h.ListMaterials)
+	teach.Get("/materials/:id", h.GetMaterial)
+	teach.Get("/materials/:id/status", h.MaterialStatus)
+	teach.Get("/exams", h.ListExams)
+	teach.Get("/exams/:id", h.GetExam)
+	teach.Post("/exams/:id/publish", h.PublishExam)
+	teach.Post("/exams/:id/questions/:qid/discard", h.DiscardExamQuestion)
+	teach.Get("/dashboard/class", h.ClassStats)
 
 	// Admin monitoring + automation.
 	admin := authed.Group("/admin", middleware.RequireRole(domain.RoleAdmin))
 	admin.Get("/overview", h.AdminOverview)
 	admin.Get("/automation", h.AdminAutomation)
 	admin.Post("/automation/run", h.RunAutomation)
-
-	// AI tutor.
-	authed.Get("/questions/:id/explain", h.ExplainQuestion)
-	authed.Post("/practice/generate", h.GeneratePractice)
-	authed.Post("/practice/:id/submit", h.SubmitPractice)
-	authed.Post("/tutor/chat", h.TutorChat)
 }

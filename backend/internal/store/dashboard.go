@@ -2,14 +2,14 @@ package store
 
 import "context"
 
-// ClassStats is the teacher dashboard summary.
+// ClassStats is the teacher dashboard summary — now sourced from exam attempts.
 type ClassStats struct {
-	Students         int              `json:"students"`
-	HomeworksGraded  int              `json:"homeworks_graded"`
-	NeedsReview      int              `json:"needs_review"`
-	AveragePercent   float64          `json:"average_percent"`
-	ScoreBuckets     []BucketCount    `json:"score_buckets"`
-	SubjectAverages  []SubjectAverage `json:"subject_averages"`
+	Students        int              `json:"students"`
+	ExamsTaken      int              `json:"exams_taken"`
+	PendingReview   int              `json:"pending_review"` // AI questions awaiting the teacher
+	AveragePercent  float64          `json:"average_percent"`
+	ScoreBuckets    []BucketCount    `json:"score_buckets"`
+	SubjectAverages []SubjectAverage `json:"subject_averages"`
 }
 
 type BucketCount struct {
@@ -30,21 +30,22 @@ func (s *Store) ClassStats(ctx context.Context, tenantID string) (*ClassStats, e
 		`SELECT COUNT(*) FROM students WHERE tenant_id=$1`, tenantID).Scan(&cs.Students)
 
 	_ = s.pool.QueryRow(ctx,
-		`SELECT COUNT(*) FROM homeworks WHERE tenant_id=$1 AND status='graded'`, tenantID).
-		Scan(&cs.HomeworksGraded)
+		`SELECT COUNT(*) FROM practice_sets WHERE tenant_id=$1 AND status='finished'`, tenantID).
+		Scan(&cs.ExamsTaken)
+
+	// AI-generated exam questions still waiting for the teacher to review.
+	_ = s.pool.QueryRow(ctx,
+		`SELECT COUNT(*) FROM questions q JOIN exams e ON e.id=q.exam_id
+		 WHERE e.tenant_id=$1 AND q.needs_review=true AND q.approved=false`, tenantID).
+		Scan(&cs.PendingReview)
 
 	_ = s.pool.QueryRow(ctx,
-		`SELECT COUNT(*) FROM review_tasks WHERE tenant_id=$1 AND status='open'`, tenantID).
-		Scan(&cs.NeedsReview)
-
-	_ = s.pool.QueryRow(ctx,
-		`SELECT COALESCE(AVG(percent),0) FROM homeworks WHERE tenant_id=$1 AND status='graded'`, tenantID).
+		`SELECT COALESCE(AVG(percent),0) FROM practice_sets WHERE tenant_id=$1 AND status='finished'`, tenantID).
 		Scan(&cs.AveragePercent)
 
-	// Score distribution buckets.
 	buckets := []struct {
-		label    string
-		lo, hi   float64
+		label  string
+		lo, hi float64
 	}{
 		{"0–59", 0, 59.999},
 		{"60–69", 60, 69.999},
@@ -55,17 +56,16 @@ func (s *Store) ClassStats(ctx context.Context, tenantID string) (*ClassStats, e
 	for _, b := range buckets {
 		var n int
 		_ = s.pool.QueryRow(ctx,
-			`SELECT COUNT(*) FROM homeworks
-			 WHERE tenant_id=$1 AND status='graded' AND percent>=$2 AND percent<=$3`,
+			`SELECT COUNT(*) FROM practice_sets
+			 WHERE tenant_id=$1 AND status='finished' AND percent>=$2 AND percent<=$3`,
 			tenantID, b.lo, b.hi).Scan(&n)
 		cs.ScoreBuckets = append(cs.ScoreBuckets, BucketCount{Label: b.label, Count: n})
 	}
 
-	// Per-subject averages.
 	rows, err := s.pool.Query(ctx,
-		`SELECT sub.name, sub.color, COALESCE(AVG(h.percent),0) AS avg
+		`SELECT sub.name, sub.color, COALESCE(AVG(ps.percent),0) AS avg
 		 FROM subjects sub
-		 LEFT JOIN homeworks h ON h.subject_id = sub.id AND h.status='graded'
+		 LEFT JOIN practice_sets ps ON ps.subject_id = sub.id AND ps.status='finished'
 		 WHERE sub.tenant_id=$1
 		 GROUP BY sub.name, sub.color
 		 ORDER BY sub.name`, tenantID)
@@ -83,23 +83,23 @@ func (s *Store) ClassStats(ctx context.Context, tenantID string) (*ClassStats, e
 	return cs, nil
 }
 
-// ProgressPoint is one graded homework in a child's timeline.
+// ProgressPoint is one finished exam attempt in a child's timeline.
 type ProgressPoint struct {
-	HomeworkID string  `json:"homework_id"`
-	Title      string  `json:"title"`
-	Subject    string  `json:"subject"`
-	Percent    float64 `json:"percent"`
-	Status     string  `json:"status"`
-	Date       string  `json:"date"`
+	ID      string  `json:"id"`
+	Title   string  `json:"title"`
+	Subject string  `json:"subject"`
+	Percent float64 `json:"percent"`
+	Status  string  `json:"status"`
+	Date    string  `json:"date"`
 }
 
-// StudentProgress is the parent-facing view.
+// StudentProgress is the parent-facing view — now from exam attempts.
 type StudentProgress struct {
-	StudentID      string           `json:"student_id"`
-	StudentName    string           `json:"student_name"`
-	GradeLevel     string           `json:"grade_level"`
-	OverallAverage float64          `json:"overall_average"`
-	Timeline       []ProgressPoint  `json:"timeline"`
+	StudentID       string           `json:"student_id"`
+	StudentName     string           `json:"student_name"`
+	GradeLevel      string           `json:"grade_level"`
+	OverallAverage  float64          `json:"overall_average"`
+	Timeline        []ProgressPoint  `json:"timeline"`
 	SubjectAverages []SubjectAverage `json:"subject_averages"`
 }
 
@@ -117,34 +117,35 @@ func (s *Store) StudentProgress(ctx context.Context, tenantID, studentID string)
 	}
 
 	_ = s.pool.QueryRow(ctx,
-		`SELECT COALESCE(AVG(percent),0) FROM homeworks
-		 WHERE tenant_id=$1 AND student_id=$2 AND status='graded'`, tenantID, studentID).
+		`SELECT COALESCE(AVG(percent),0) FROM practice_sets
+		 WHERE tenant_id=$1 AND student_id=$2 AND status='finished'`, tenantID, studentID).
 		Scan(&sp.OverallAverage)
 
 	rows, err := s.pool.Query(ctx,
-		`SELECT h.id, h.title, COALESCE(sub.name,h.detected_subject), h.percent, h.status,
-		        to_char(h.created_at, 'YYYY-MM-DD')
-		 FROM homeworks h
-		 LEFT JOIN subjects sub ON sub.id = h.subject_id
-		 WHERE h.tenant_id=$1 AND h.student_id=$2
-		 ORDER BY h.created_at ASC`, tenantID, studentID)
+		`SELECT ps.id, COALESCE(e.title,'Practice'), COALESCE(sub.name,''), ps.percent, ps.status,
+		        to_char(COALESCE(ps.finished_at, ps.created_at), 'YYYY-MM-DD')
+		 FROM practice_sets ps
+		 LEFT JOIN exams e ON e.id = ps.exam_id
+		 LEFT JOIN subjects sub ON sub.id = ps.subject_id
+		 WHERE ps.tenant_id=$1 AND ps.student_id=$2 AND ps.status='finished'
+		 ORDER BY ps.finished_at ASC`, tenantID, studentID)
 	if err != nil {
 		return sp, nil
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var p ProgressPoint
-		if err := rows.Scan(&p.HomeworkID, &p.Title, &p.Subject, &p.Percent, &p.Status, &p.Date); err != nil {
+		if err := rows.Scan(&p.ID, &p.Title, &p.Subject, &p.Percent, &p.Status, &p.Date); err != nil {
 			return sp, nil
 		}
 		sp.Timeline = append(sp.Timeline, p)
 	}
 
 	subRows, err := s.pool.Query(ctx,
-		`SELECT sub.name, sub.color, COALESCE(AVG(h.percent),0)
+		`SELECT sub.name, sub.color, COALESCE(AVG(ps.percent),0)
 		 FROM subjects sub
-		 JOIN homeworks h ON h.subject_id = sub.id AND h.status='graded'
-		 WHERE sub.tenant_id=$1 AND h.student_id=$2
+		 JOIN practice_sets ps ON ps.subject_id = sub.id AND ps.status='finished'
+		 WHERE sub.tenant_id=$1 AND ps.student_id=$2
 		 GROUP BY sub.name, sub.color ORDER BY sub.name`, tenantID, studentID)
 	if err == nil {
 		defer subRows.Close()

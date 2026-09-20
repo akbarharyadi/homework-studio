@@ -17,29 +17,6 @@ func (h *Handler) ExplainQuestion(c *fiber.Ctx) error {
 	return httpx.OK(c, fiber.Map{"explanation": text})
 }
 
-type generateRequest struct {
-	StudentID string `json:"student_id"`
-	SubjectID string `json:"subject_id"`
-	Count     int    `json:"count"`
-}
-
-// GeneratePractice creates a per-student practice set (answers stripped).
-func (h *Handler) GeneratePractice(c *fiber.Ctx) error {
-	var req generateRequest
-	if err := c.BodyParser(&req); err != nil {
-		return httpx.BadRequest(c, "invalid body")
-	}
-	if req.SubjectID == "" || req.StudentID == "" {
-		return httpx.BadRequest(c, "student_id and subject_id are required")
-	}
-	ps, questions, err := h.tutor.GeneratePractice(
-		c.Context(), middleware.TenantID(c), req.StudentID, req.SubjectID, req.Count)
-	if err != nil {
-		return httpx.BadRequest(c, err.Error())
-	}
-	return httpx.Created(c, fiber.Map{"practice_set_id": ps.ID, "questions": questions})
-}
-
 type submitRequest struct {
 	Answers map[string]string `json:"answers"`
 }

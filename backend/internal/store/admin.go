@@ -32,27 +32,24 @@ func (s *Store) LastReportTime(ctx context.Context, tenantID string) string {
 	return *t
 }
 
-// AdminStudentRow is one row in the school-wide monitoring table.
+// AdminStudentRow is one row in the school-wide monitoring table (from attempts).
 type AdminStudentRow struct {
 	StudentID    string  `json:"student_id"`
 	Name         string  `json:"name"`
 	Grade        string  `json:"grade_level"`
 	Average      float64 `json:"average"`
-	Homeworks    int     `json:"homeworks"`
-	NeedsReview  int     `json:"needs_review"`
+	ExamsTaken   int     `json:"exams_taken"`
 	LastActivity string  `json:"last_activity"`
 }
 
 func (s *Store) AdminStudentRows(ctx context.Context, tenantID string) ([]AdminStudentRow, error) {
 	rows, err := s.pool.Query(ctx,
 		`SELECT s.id, s.name, s.grade_level,
-		    COALESCE(AVG(h.percent) FILTER (WHERE h.status='graded'), 0) AS avg,
-		    COUNT(h.id) FILTER (WHERE h.status='graded') AS done,
-		    COALESCE((SELECT COUNT(*) FROM review_tasks r JOIN homeworks hh ON hh.id=r.homework_id
-		              WHERE hh.student_id=s.id AND r.status='open'), 0) AS needs_review,
-		    COALESCE(to_char(MAX(h.created_at), 'YYYY-MM-DD'), '—') AS last
+		    COALESCE(AVG(ps.percent) FILTER (WHERE ps.status='finished'), 0) AS avg,
+		    COUNT(ps.id) FILTER (WHERE ps.status='finished') AS done,
+		    COALESCE(to_char(MAX(ps.finished_at), 'YYYY-MM-DD'), '—') AS last
 		 FROM students s
-		 LEFT JOIN homeworks h ON h.student_id = s.id
+		 LEFT JOIN practice_sets ps ON ps.student_id = s.id
 		 WHERE s.tenant_id=$1
 		 GROUP BY s.id, s.name, s.grade_level
 		 ORDER BY avg DESC`, tenantID)
@@ -63,7 +60,7 @@ func (s *Store) AdminStudentRows(ctx context.Context, tenantID string) ([]AdminS
 	out := []AdminStudentRow{}
 	for rows.Next() {
 		var r AdminStudentRow
-		if err := rows.Scan(&r.StudentID, &r.Name, &r.Grade, &r.Average, &r.Homeworks, &r.NeedsReview, &r.LastActivity); err != nil {
+		if err := rows.Scan(&r.StudentID, &r.Name, &r.Grade, &r.Average, &r.ExamsTaken, &r.LastActivity); err != nil {
 			return nil, err
 		}
 		out = append(out, r)

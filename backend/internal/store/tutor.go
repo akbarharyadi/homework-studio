@@ -15,12 +15,20 @@ func (s *Store) CreateQuestion(ctx context.Context, q *domain.Question) error {
 		q.ID = domain.NewID()
 	}
 	opts, _ := json.Marshal(q.Options)
+	conf, approved := q.Confidence, q.Approved
+	if q.ExamID == nil { // bank / ad-hoc question: always trusted
+		if conf == 0 {
+			conf = 1
+		}
+		approved = true
+	}
 	_, err := s.pool.Exec(ctx,
 		`INSERT INTO questions (id, tenant_id, subject_id, topic, difficulty, stem, options,
-		    answer, explanation, marks, negative_marks, ai_generated)
-		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+		    answer, explanation, marks, negative_marks, ai_generated, exam_id, confidence, needs_review, approved)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
 		q.ID, q.TenantID, q.SubjectID, q.Topic, q.Difficulty, q.Stem, opts,
-		q.Answer, q.Explanation, q.Marks, q.NegativeMarks, q.AIGenerated)
+		q.Answer, q.Explanation, q.Marks, q.NegativeMarks, q.AIGenerated,
+		q.ExamID, conf, q.NeedsReview, approved)
 	return err
 }
 
@@ -29,9 +37,11 @@ func (s *Store) GetQuestion(ctx context.Context, id string) (*domain.Question, e
 	var opts []byte
 	err := s.pool.QueryRow(ctx,
 		`SELECT id, tenant_id, subject_id, topic, difficulty, stem, options, answer,
-		    explanation, marks, negative_marks, ai_generated FROM questions WHERE id=$1`, id).
+		    explanation, marks, negative_marks, ai_generated, exam_id, confidence, needs_review, approved
+		 FROM questions WHERE id=$1`, id).
 		Scan(&q.ID, &q.TenantID, &q.SubjectID, &q.Topic, &q.Difficulty, &q.Stem, &opts,
-			&q.Answer, &q.Explanation, &q.Marks, &q.NegativeMarks, &q.AIGenerated)
+			&q.Answer, &q.Explanation, &q.Marks, &q.NegativeMarks, &q.AIGenerated,
+			&q.ExamID, &q.Confidence, &q.NeedsReview, &q.Approved)
 	if err != nil {
 		return nil, noRows(err)
 	}
@@ -46,7 +56,7 @@ func (s *Store) ListQuestions(ctx context.Context, tenantID, subjectID, difficul
 	}
 	q := `SELECT id, tenant_id, subject_id, topic, difficulty, stem, options, answer,
 	         explanation, marks, negative_marks, ai_generated
-	      FROM questions WHERE tenant_id=$1 AND subject_id=$2`
+	      FROM questions WHERE tenant_id=$1 AND subject_id=$2 AND exam_id IS NULL`
 	args := []any{tenantID, subjectID}
 	if difficulty != "" {
 		args = append(args, difficulty)

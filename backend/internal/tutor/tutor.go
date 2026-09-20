@@ -68,58 +68,64 @@ func mockExplanation(q *domain.Question) string {
 	return b.String()
 }
 
-// GeneratePractice picks `count` questions for a student, stratified across
-// difficulties (adapted from ai-cbt's exam generator). Returns the created set and
-// the client-safe questions (answers stripped).
-func (s *Service) GeneratePractice(ctx context.Context, tenantID, studentID, subjectID string, count int) (*domain.PracticeSet, []domain.Question, error) {
+// GenerateExam produces `count` multiple-choice questions grounded in the teacher's
+// uploaded material. GLM authors them (with a self-reported confidence) when a key
+// is set; otherwise it samples the seeded bank for the subject. The returned
+// questions are NOT yet persisted — the coursework pipeline attaches them to an exam.
+func (s *Service) GenerateExam(ctx context.Context, tenantID, subjectID, subjectName, materialText string, count int) ([]domain.Question, error) {
 	if count <= 0 {
-		count = 5
+		count = 8
 	}
-	// GLM authors fresh questions when a real client is configured; the question
-	// bank (stratified sample below) is the free/offline fallback.
 	if s.client.Enabled() {
-		if ps, qs, err := s.aiGeneratePractice(ctx, tenantID, studentID, subjectID, count); err == nil {
-			return ps, qs, nil
-		}
-	}
-	// Stratified sample: aim for a spread of easy/medium/hard.
-	buckets := []string{domain.DiffEasy, domain.DiffMedium, domain.DiffHard}
-	picked := map[string]domain.Question{}
-	per := count/len(buckets) + 1
-	for _, d := range buckets {
-		qs, _ := s.store.ListQuestions(ctx, tenantID, subjectID, d, per)
-		for _, q := range qs {
-			picked[q.ID] = q
-		}
-	}
-	// Top up from any difficulty if we came short.
-	if len(picked) < count {
-		qs, _ := s.store.ListQuestions(ctx, tenantID, subjectID, "", count*2)
-		for _, q := range qs {
-			if len(picked) >= count {
-				break
+		if qs, err := s.aiExamFromMaterial(ctx, tenantID, subjectName, materialText, count); err == nil && len(qs) > 0 {
+			for i := range qs {
+				qs[i].TenantID, qs[i].SubjectID = tenantID, subjectID
 			}
-			picked[q.ID] = q
+			return qs, nil
 		}
 	}
-	if len(picked) == 0 {
-		return nil, nil, fmt.Errorf("no questions available for subject")
+	// Fallback (no key / error): draw from the seeded question bank for this subject.
+	bank, _ := s.store.ListQuestions(ctx, tenantID, subjectID, "", count)
+	out := make([]domain.Question, 0, len(bank))
+	for _, q := range bank {
+		q.ID, q.ExamID = "", nil // caller mints IDs + sets the exam
+		q.AIGenerated, q.Approved, q.NeedsReview = true, false, false
+		q.Confidence, q.Topic = 0.95, "From material"
+		out = append(out, q)
 	}
+	if len(out) == 0 {
+		return nil, fmt.Errorf("no questions available for subject")
+	}
+	return out, nil
+}
 
-	chosen := make([]domain.Question, 0, len(picked))
-	for _, q := range picked {
-		chosen = append(chosen, q)
+// GenerateNotes writes short teaching notes (a lesson summary) from the material.
+// Falls back to a trimmed excerpt so it always returns something.
+func (s *Service) GenerateNotes(ctx context.Context, tenantID, subjectName, materialText string) string {
+	if s.client.Enabled() {
+		material := clip(materialText, 6000)
+		out, usage, err := s.client.Chat(ctx, []ai.Message{
+			{Role: "system", Content: "You are a helpful teacher who writes concise, warm lesson notes."},
+			{Role: "user", Content: fmt.Sprintf(
+				"From this %s teaching material, write short notes the teacher can teach from: 3–6 key points and one worked example. Use Markdown, and $...$ for any math.\n\nMATERIAL:\n\"\"\"\n%s\n\"\"\"", subjectName, material)},
+		}, 0.4, 900)
+		if err == nil && strings.TrimSpace(out) != "" {
+			s.store.LogAIUsage(ctx, tenantID, nil, "teaching_notes", usage.PromptTokens, usage.CompletionTokens, s.client.Model())
+			return out
+		}
 	}
-	sort.Slice(chosen, func(i, j int) bool { return chosen[i].ID < chosen[j].ID })
-	if len(chosen) > count {
-		chosen = chosen[:count]
+	excerpt := strings.TrimSpace(materialText)
+	if excerpt == "" {
+		return "_No readable text was extracted from this material._"
 	}
+	return "**Key points from this material**\n\n" + clip(excerpt, 400)
+}
 
-	ps := &domain.PracticeSet{TenantID: tenantID, StudentID: studentID, SubjectID: subjectID}
-	if err := s.store.CreatePracticeSet(ctx, ps, chosen); err != nil {
-		return nil, nil, err
+func clip(s string, n int) string {
+	if len(s) <= n {
+		return s
 	}
-	return ps, stripAnswers(chosen), nil
+	return s[:n] + "…"
 }
 
 // SubmitResult reports the grade of a finished practice set.
@@ -262,62 +268,71 @@ type aiQuestion struct {
 	Answer      string   `json:"answer"`
 	Explanation string   `json:"explanation"`
 	Difficulty  string   `json:"difficulty"`
+	Confidence  float64  `json:"confidence"`
 }
 
-// aiGeneratePractice asks GLM to write fresh, age-appropriate questions, persists
-// them (marked ai_generated) so explanations work, and freezes them into a set.
-func (s *Service) aiGeneratePractice(ctx context.Context, tenantID, studentID, subjectID string, count int) (*domain.PracticeSet, []domain.Question, error) {
-	sub, err := s.store.GetSubjectByID(ctx, subjectID)
-	if err != nil {
-		return nil, nil, err
-	}
-	prompt := fmt.Sprintf(`Write %d multiple-choice %s questions for a Grade 4 student (about 9-10 years old).
+// aiExamFromMaterial asks GLM to write exam questions grounded in the material, each
+// with a self-reported confidence. Returns un-persisted questions (Approved=false,
+// low-confidence ones flagged) for the coursework pipeline to attach to an exam.
+func (s *Service) aiExamFromMaterial(ctx context.Context, tenantID, subjectName, materialText string, count int) ([]domain.Question, error) {
+	prompt := fmt.Sprintf(`You are given TEACHING MATERIAL. Write %d multiple-choice %s questions that test the key ideas IN THIS MATERIAL, for a Grade 4 student (about 9-10 years old).
 Return ONLY a JSON array, no prose or code fences, each item exactly:
-{"stem":"...","options":["...","...","...","..."],"answer":"<must exactly match one option>","explanation":"one short encouraging line, use $...$ for any math","difficulty":"easy|medium|hard"}
-Make them varied and fun. Four options each. The answer must be one of the options verbatim.`, count, sub.Name)
+{"stem":"...","options":["...","...","...","..."],"answer":"<must exactly match one option>","explanation":"one short line, use $...$ for any math","difficulty":"easy|medium|hard","confidence":0.0}
+"confidence" is how well the question is grounded in the material and self-consistent (0.0-1.0).
+Four options each. The answer MUST be one of the options verbatim.
+
+MATERIAL:
+"""
+%s
+"""`, count, subjectName, clip(materialText, 6000))
 
 	out, usage, err := s.client.Chat(ctx, []ai.Message{
-		{Role: "system", Content: "You are a warm primary-school teacher who writes clear practice questions. Output strict JSON only."},
+		{Role: "system", Content: "You are a warm primary-school teacher who writes clear exams grounded in the given material. Output strict JSON only."},
 		{Role: "user", Content: prompt},
-	}, 0.7, 2048)
+	}, 0.6, 2600)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	var raw []aiQuestion
 	if err := parseJSONArray(out, &raw); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	chosen := make([]domain.Question, 0, count)
+	qs := make([]domain.Question, 0, count)
 	for _, r := range raw {
 		if strings.TrimSpace(r.Stem) == "" || len(r.Options) < 2 || strings.TrimSpace(r.Answer) == "" {
 			continue
 		}
-		q := &domain.Question{
-			TenantID: tenantID, SubjectID: subjectID, Topic: "AI practice",
-			Difficulty: normDifficulty(r.Difficulty), Stem: r.Stem, Options: r.Options,
-			Answer: r.Answer, Explanation: r.Explanation, Marks: 1, AIGenerated: true,
+		conf := r.Confidence
+		if conf <= 0 {
+			conf = 0.7
 		}
-		if err := s.store.CreateQuestion(ctx, q); err == nil {
-			chosen = append(chosen, *q)
+		if conf > 1 {
+			conf = 1
 		}
-		if len(chosen) >= count {
+		inOpts := false
+		for _, o := range r.Options {
+			if strings.EqualFold(strings.TrimSpace(o), strings.TrimSpace(r.Answer)) {
+				inOpts = true
+				break
+			}
+		}
+		qs = append(qs, domain.Question{
+			Topic: "From material", Difficulty: normDifficulty(r.Difficulty),
+			Stem: r.Stem, Options: r.Options, Answer: r.Answer, Explanation: r.Explanation,
+			Marks: 1, AIGenerated: true, Approved: false,
+			Confidence: conf, NeedsReview: conf < 0.80 || !inOpts,
+		})
+		if len(qs) >= count {
 			break
 		}
 	}
-	if len(chosen) == 0 {
-		return nil, nil, fmt.Errorf("no valid AI questions")
+	if len(qs) == 0 {
+		return nil, fmt.Errorf("no valid AI questions")
 	}
-
-	sid := studentID
-	s.store.LogAIUsage(ctx, tenantID, &sid, "practice_generation", usage.PromptTokens, usage.CompletionTokens, s.client.Model())
-
-	ps := &domain.PracticeSet{TenantID: tenantID, StudentID: studentID, SubjectID: subjectID}
-	if err := s.store.CreatePracticeSet(ctx, ps, chosen); err != nil {
-		return nil, nil, err
-	}
-	return ps, stripAnswers(chosen), nil
+	s.store.LogAIUsage(ctx, tenantID, nil, "exam_generation", usage.PromptTokens, usage.CompletionTokens, s.client.Model())
+	return qs, nil
 }
 
 func normDifficulty(d string) string {

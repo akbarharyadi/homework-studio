@@ -26,7 +26,7 @@ export function AdminOverviewPage() {
   if (!o) return <div className="flex justify-center py-24"><Spinner label="Loading school…" /></div>;
 
   // Derived analytics (research-backed): mastery bands, early-warning, top performers.
-  const withData = o.students_rows.filter((r) => r.homeworks > 0);
+  const withData = o.students_rows.filter((r) => r.exams_taken > 0);
   const mastered = withData.filter((r) => r.average >= 80);
   const onTrack = withData.filter((r) => r.average >= 65 && r.average < 80);
   const needsSupport = withData.filter((r) => r.average < 65);
@@ -52,7 +52,7 @@ export function AdminOverviewPage() {
         <Stat icon="🧑‍🏫" label="Teachers" value={o.teachers} tone="brand" />
         <Stat icon="👪" label="Parents" value={o.parents} tone="grow" />
         <Stat icon="📈" label="Class average" value={`${o.average_percent.toFixed(0)}%`} tone="brand" />
-        <Stat icon="✅" label="Homeworks graded" value={o.homeworks_graded} tone="grow" />
+        <Stat icon="✅" label="Exams taken" value={o.exams_taken} tone="grow" />
         <Stat icon="🗓️" label="Auto-generated reports" value={o.reports_generated} tone="flag" />
       </div>
 
@@ -94,7 +94,7 @@ export function AdminOverviewPage() {
                   <div key={r.student_id} className="flex items-center justify-between rounded-lg bg-flag-soft px-3 py-2">
                     <div>
                       <div className="font-semibold text-ink">{r.name}</div>
-                      <div className="text-xs text-ink-soft">{r.grade_level} · {r.homeworks} homeworks</div>
+                      <div className="text-xs text-ink-soft">{r.grade_level} · {r.exams_taken} exams</div>
                     </div>
                     <Badge tone="flag">{r.average.toFixed(0)}%</Badge>
                   </div>
@@ -145,8 +145,8 @@ export function AdminOverviewPage() {
       <Card className="mt-6">
         <CardBody>
           <h3 className="text-lg font-semibold text-ink">Score distribution</h3>
-          <Note>How many homeworks land in each score band — a healthy class leans right (green).</Note>
-          {o.homeworks_graded > 0 ? (
+          <Note>How many exam attempts land in each score band — a healthy class leans right (green).</Note>
+          {o.exams_taken > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={o.score_buckets}>
                 <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#5b667c" }} axisLine={false} tickLine={false} />
@@ -158,7 +158,7 @@ export function AdminOverviewPage() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <p className="py-12 text-center text-sm text-ink-soft">No graded homework yet.</p>
+            <p className="py-12 text-center text-sm text-ink-soft">No exams taken yet.</p>
           )}
         </CardBody>
       </Card>
@@ -167,7 +167,7 @@ export function AdminOverviewPage() {
       <Card className="mt-6">
         <CardBody>
           <h3 className="text-lg font-semibold text-ink">All students</h3>
-          <Note>The full roster — sorted by average, with anyone needing review flagged.</Note>
+          <Note>The full roster — sorted by average.</Note>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -175,8 +175,7 @@ export function AdminOverviewPage() {
                   <th className="py-2 font-medium">Student</th>
                   <th className="font-medium">Grade</th>
                   <th className="font-medium">Average</th>
-                  <th className="font-medium">Homeworks</th>
-                  <th className="font-medium">Needs review</th>
+                  <th className="font-medium">Exams</th>
                   <th className="font-medium">Last activity</th>
                 </tr>
               </thead>
@@ -191,8 +190,7 @@ export function AdminOverviewPage() {
                         <span className="tabular-nums text-ink">{r.average.toFixed(0)}%</span>
                       </div>
                     </td>
-                    <td className="text-ink-soft">{r.homeworks}</td>
-                    <td>{r.needs_review > 0 ? <Badge tone="flag">{r.needs_review}</Badge> : <span className="text-ink-soft">—</span>}</td>
+                    <td className="text-ink-soft">{r.exams_taken}</td>
                     <td className="text-ink-soft">{r.last_activity}</td>
                   </tr>
                 ))}

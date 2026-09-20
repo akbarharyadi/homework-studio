@@ -7,7 +7,7 @@ import type { Role } from "../lib/api";
 const HOME: Record<Role, string> = { admin: "/admin", teacher: "/teacher", parent: "/parent", student: "/student" };
 
 const ROLES = [
-  { role: "Teacher", email: "teacher@demo.id", icon: "🧑‍🏫", blurb: "Upload homework, watch it grade itself, and review anything unclear." },
+  { role: "Teacher", email: "teacher@demo.id", icon: "🧑‍🏫", blurb: "Upload material, let the AI generate an exam, and review it before publishing." },
   { role: "Parent", email: "parent@demo.id", icon: "👪", blurb: "See how your child is doing — and download a progress report." },
   { role: "Student", email: "student@demo.id", icon: "🧒", blurb: "Practise, get instant feedback, and ask the tutor for help." },
   { role: "Admin", email: "admin@demo.id", icon: "🏫", blurb: "Monitor the whole school's progress — and watch the automation run." },
@@ -40,8 +40,8 @@ export function Login() {
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-brand text-4xl shadow-lift">📓</div>
         <h1 className="font-display text-4xl font-bold text-ink">Homework Studio</h1>
         <p className="mx-auto mt-2 max-w-md text-ink-soft">
-          Homework comes in. It gets read, graded, and anything unclear goes to the teacher — then it turns into a
-          warm progress report. Plus an AI tutor for the kids.
+          Teaching material comes in. The AI reads it, writes lesson notes, and generates an exam the teacher reviews —
+          then students take it and parents see the progress. Plus an AI tutor for the kids.
         </p>
       </header>
 

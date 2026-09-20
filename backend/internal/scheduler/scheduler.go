@@ -144,7 +144,7 @@ func narrative(name string, done int, avg float64, top string) string {
 	if i := strings.IndexByte(name, ' '); i > 0 {
 		first = name[:i]
 	}
-	s := fmt.Sprintf("%s completed %d homework", first, done)
+	s := fmt.Sprintf("%s completed %d exam", first, done)
 	if done != 1 {
 		s += "s"
 	}

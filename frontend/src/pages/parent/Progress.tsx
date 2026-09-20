@@ -50,7 +50,7 @@ export function ParentProgress() {
       {!progress ? (
         <div className="flex justify-center py-24"><Spinner /></div>
       ) : progress.timeline.length === 0 ? (
-        <EmptyState icon="🌱" title={`${progress.student_name.split(" ")[0]} is just getting started`} body="Once homework is graded, you'll see averages, trends, and a report here." />
+        <EmptyState icon="🌱" title={`${progress.student_name.split(" ")[0]} is just getting started`} body="Once an exam is taken, you'll see averages, trends, and a report here." />
       ) : (
         <>
           {report && (
@@ -74,7 +74,7 @@ export function ParentProgress() {
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
             <Stat icon="🧒" label={progress.grade_level} value={progress.student_name} tone="info" />
             <Stat icon="📈" label="Overall average" value={`${progress.overall_average.toFixed(0)}%`} tone="brand" />
-            <Stat icon="✅" label="Homeworks done" value={progress.timeline.length} tone="grow" />
+            <Stat icon="✅" label="Exams taken" value={progress.timeline.length} tone="grow" />
           </div>
 
           <div className="mt-6 grid gap-6 lg:grid-cols-2">
@@ -114,10 +114,10 @@ export function ParentProgress() {
 
           <Card className="mt-6">
             <CardBody>
-              <h3 className="mb-3 text-lg font-semibold text-ink">Homework history</h3>
+              <h3 className="mb-3 text-lg font-semibold text-ink">Exam history</h3>
               <div className="divide-y divide-line">
                 {progress.timeline.slice().reverse().map((t) => (
-                  <div key={t.homework_id} className="flex items-center justify-between py-3 text-sm">
+                  <div key={t.id} className="flex items-center justify-between py-3 text-sm">
                     <div>
                       <span className="font-semibold text-ink">{t.title}</span>
                       <span className="ml-2 text-ink-soft">{t.subject} · {t.date}</span>

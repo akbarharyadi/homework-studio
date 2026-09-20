@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"unicode/utf8"
 
 	"homework-studio/internal/ai"
 )
@@ -105,6 +106,57 @@ func (e *LLMVisionExtractor) Extract(ctx context.Context, in ExtractInput) (Extr
 		})
 	}
 	return ExtractOutput{Items: items, DetectedSubject: parsed.Subject, SubjectConfidence: 0.92}, nil
+}
+
+const textSystem = "You are a careful assistant that transcribes teaching documents into plain text."
+const textUser = "Transcribe this teaching material to clean plain text, keeping headings, lists and any worked examples. Output ONLY the transcribed text, no commentary."
+
+// ReadText turns an uploaded teaching material into UTF-8 text so the AI can index
+// it (RAG), summarize it, and generate an exam from it. Plain-text files are read
+// directly; images and PDFs go through the vision model; when no vision client is
+// configured (mock) or on any error it falls back to the raw bytes (if textual) or
+// a short placeholder, so the coursework pipeline never breaks.
+func ReadText(ctx context.Context, client *ai.Client, filename string, data []byte) (string, error) {
+	lower := strings.ToLower(filename)
+	if strings.HasSuffix(lower, ".txt") || strings.HasSuffix(lower, ".md") || strings.HasSuffix(lower, ".csv") {
+		return string(data), nil
+	}
+
+	dataURL := ""
+	if mime, ok := imageMime(filename); ok {
+		dataURL = "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(data)
+	} else if strings.HasSuffix(lower, ".pdf") {
+		if png, err := rasterizePDF(ctx, data); err == nil {
+			dataURL = "data:image/png;base64," + base64.StdEncoding.EncodeToString(png)
+		}
+	}
+
+	if dataURL != "" && client != nil && client.Enabled() {
+		out, _, err := client.ChatVision(ctx, textSystem, textUser, dataURL, 0.1, 4096)
+		if err == nil && strings.TrimSpace(out) != "" {
+			return out, nil
+		}
+	}
+
+	// Fallback: usable text stays usable; binary becomes a labelled placeholder.
+	if utf8.Valid(data) && isMostlyPrintable(data) {
+		return string(data), nil
+	}
+	return "Uploaded teaching material: " + filename, nil
+}
+
+// isMostlyPrintable is a cheap check that a byte slice is human-readable text.
+func isMostlyPrintable(b []byte) bool {
+	if len(b) == 0 {
+		return false
+	}
+	printable := 0
+	for _, r := range string(b) {
+		if r == '\n' || r == '\t' || r == '\r' || (r >= 0x20 && r != 0xFFFD) {
+			printable++
+		}
+	}
+	return printable*10 >= len(b)*9 // ≥90% printable
 }
 
 func imageMime(filename string) (string, bool) {

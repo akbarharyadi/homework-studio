@@ -33,6 +33,20 @@ const (
 	DiffHard   = "hard"
 )
 
+// Material lifecycle (teacher-uploaded teaching material).
+const (
+	MaterialProcessing = "processing"
+	MaterialReady      = "ready"
+	MaterialFailed     = "failed"
+)
+
+// Exam lifecycle (AI-generated from a material, reviewed + published by the teacher).
+const (
+	ExamDraft       = "draft"
+	ExamNeedsReview = "needs_review"
+	ExamPublished   = "published"
+)
+
 type Tenant struct {
 	ID                  string    `json:"id"`
 	Name                string    `json:"name"`
@@ -128,6 +142,41 @@ type Question struct {
 	Marks        float64  `json:"marks"`
 	NegativeMarks float64 `json:"negative_marks"`
 	AIGenerated  bool     `json:"ai_generated"`
+	ExamID       *string  `json:"exam_id,omitempty"`
+	Confidence   float64  `json:"confidence"`
+	NeedsReview  bool     `json:"needs_review"`
+	Approved     bool     `json:"approved"`
+}
+
+// Material is a teacher-uploaded document (syllabus / lesson content). The AI reads
+// it into tutor knowledge, teaching notes, and a generated exam.
+type Material struct {
+	ID             string    `json:"id"`
+	TenantID       string    `json:"tenant_id"`
+	SubjectID      string    `json:"subject_id"`
+	Title          string    `json:"title"`
+	Source         string    `json:"source"`
+	UploadedBy     string    `json:"uploaded_by"`
+	Status         string    `json:"status"`
+	StorageKey     string    `json:"storage_key"`
+	SourceFilename string    `json:"source_filename"`
+	Summary        string    `json:"summary"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+// Exam is an AI-generated assessment grounded in a material; the teacher reviews
+// flagged questions and publishes it for students.
+type Exam struct {
+	ID            string     `json:"id"`
+	TenantID      string     `json:"tenant_id"`
+	SubjectID     *string    `json:"subject_id,omitempty"`
+	MaterialID    *string    `json:"material_id,omitempty"`
+	Title         string     `json:"title"`
+	Status        string     `json:"status"`
+	QuestionCount int        `json:"question_count"`
+	CreatedBy     string     `json:"created_by"`
+	CreatedAt     time.Time  `json:"created_at"`
+	PublishedAt   *time.Time `json:"published_at,omitempty"`
 }
 
 type PracticeSet struct {

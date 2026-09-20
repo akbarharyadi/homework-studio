@@ -6,18 +6,18 @@ import { Button } from "./ui";
 const NAV: Record<string, { to: string; label: string; icon: string; end?: boolean }[]> = {
   teacher: [
     { to: "/teacher", label: "Dashboard", icon: "📊", end: true },
-    { to: "/teacher/upload", label: "Upload", icon: "📄" },
-    { to: "/teacher/review", label: "Review", icon: "⚖️" },
+    { to: "/teacher/materials", label: "Materials", icon: "📚" },
+    { to: "/teacher/exams", label: "Exams", icon: "📝" },
   ],
   admin: [
     { to: "/admin", label: "Overview", icon: "🏫", end: true },
     { to: "/admin/automation", label: "Automation", icon: "⚙️" },
-    { to: "/teacher/upload", label: "Upload", icon: "📄" },
-    { to: "/teacher/review", label: "Review", icon: "⚖️" },
+    { to: "/teacher/materials", label: "Materials", icon: "📚" },
+    { to: "/teacher/exams", label: "Exams", icon: "📝" },
   ],
   parent: [{ to: "/parent", label: "My children", icon: "👪", end: true }],
   student: [
-    { to: "/student", label: "Practice", icon: "✏️", end: true },
+    { to: "/student", label: "Exams", icon: "📝", end: true },
     { to: "/student/tutor", label: "Tutor", icon: "💬" },
   ],
 };

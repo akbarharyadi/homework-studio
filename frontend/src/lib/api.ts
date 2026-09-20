@@ -69,50 +69,72 @@ export interface Student {
   grade_level: string;
   parent_user_id?: string;
 }
-export interface Homework {
+
+export type MaterialStatus = "processing" | "ready" | "failed";
+export type ExamStatus = "draft" | "needs_review" | "published";
+
+export interface MaterialRow {
   id: string;
-  student_id: string;
-  subject_id?: string;
   title: string;
-  status: "pending" | "processing" | "needs_review" | "graded" | "failed";
-  detected_subject: string;
-  score: number;
-  max_score: number;
-  percent: number;
-  confidence: number;
+  subject: string;
+  status: MaterialStatus;
+  created_at: string;
+  exam_id: string;
+  exam_status: string;
+}
+export interface Material {
+  id: string;
+  subject_id: string;
+  title: string;
+  status: MaterialStatus;
+  source_filename: string;
+  summary: string;
   created_at: string;
 }
-export interface HomeworkItem {
+export interface Question {
   id: string;
-  question_no: number;
-  question_text: string;
-  student_answer: string;
-  correct_answer: string;
-  is_correct?: boolean;
-  marks: number;
-  max_marks: number;
-  confidence: number;
-  needs_review: boolean;
+  subject_id: string;
+  topic: string;
+  difficulty: string;
+  stem: string;
+  options: string[];
+  answer?: string;
+  explanation?: string;
+  confidence?: number;
+  needs_review?: boolean;
+  approved?: boolean;
 }
-export interface ReviewTask {
+export interface ExamRow {
   id: string;
-  homework_id: string;
-  item_id?: string;
-  field_name: string;
-  reason: string;
-  status: string;
-  student_name: string;
-  homework_title: string;
-  question_no: number;
-  question_text: string;
-  student_answer: string;
-  correct_answer: string;
-  confidence: number;
+  title: string;
+  subject: string;
+  status: ExamStatus;
+  question_count: number;
+  flagged: number;
+  created_at: string;
 }
+export interface Exam {
+  id: string;
+  subject_id?: string;
+  material_id?: string;
+  title: string;
+  status: ExamStatus;
+  question_count: number;
+  created_at: string;
+  published_at?: string;
+}
+export interface PublishedExam {
+  id: string;
+  title: string;
+  subject: string;
+  subject_id: string;
+  question_count: number;
+}
+
 export interface ClassStats {
   students: number;
-  homeworks_graded: number;
-  needs_review: number;
+  exams_taken: number;
+  pending_review: number;
   average_percent: number;
   score_buckets: { label: string; count: number }[];
   subject_averages: { subject: string; color: string; average: number }[];
@@ -122,16 +144,8 @@ export interface StudentProgress {
   student_name: string;
   grade_level: string;
   overall_average: number;
-  timeline: { homework_id: string; title: string; subject: string; percent: number; status: string; date: string }[];
+  timeline: { id: string; title: string; subject: string; percent: number; status: string; date: string }[];
   subject_averages: { subject: string; color: string; average: number }[];
-}
-export interface Question {
-  id: string;
-  subject_id: string;
-  topic: string;
-  difficulty: string;
-  stem: string;
-  options: string[];
 }
 export interface StudentReportInfo {
   student_id: string;
@@ -147,17 +161,16 @@ export interface AdminStudentRow {
   name: string;
   grade_level: string;
   average: number;
-  homeworks: number;
-  needs_review: number;
+  exams_taken: number;
   last_activity: string;
 }
 export interface AdminOverview {
   students: number;
   teachers: number;
   parents: number;
-  homeworks_graded: number;
+  exams_taken: number;
   average_percent: number;
-  needs_review: number;
+  pending_review: number;
   reports_generated: number;
   score_buckets: { label: string; count: number }[];
   subject_averages: { subject: string; color: string; average: number }[];
@@ -195,40 +208,36 @@ export const api = {
   studentProgress: (id: string) => request<StudentProgress>(`/students/${id}/progress`),
   latestReport: (id: string) => request<StudentReportInfo>(`/reports/student/${id}`),
 
-  homeworks: (params?: { student_id?: string; status?: string }) => {
-    const q = new URLSearchParams(params as Record<string, string>).toString();
-    return request<Homework[]>(`/homeworks${q ? `?${q}` : ""}`);
-  },
-  homework: (id: string) => request<{ homework: Homework; items: HomeworkItem[] }>(`/homeworks/${id}`),
-  homeworkStatus: (id: string) =>
-    request<{ id: string; status: string; percent: number; confidence: number }>(`/homeworks/${id}/status`),
-  uploadHomework: (form: FormData) =>
-    request<{ id: string; status: string }>("/homeworks", { method: "POST", body: form }),
-
-  reviewTasks: (status = "open") => request<ReviewTask[]>(`/review/tasks?status=${status}`),
-  resolveReview: (id: string, corrected_answer: string, is_correct: boolean) =>
-    request<{ homework: Homework }>(`/review/tasks/${id}/resolve`, {
-      method: "POST",
-      body: JSON.stringify({ corrected_answer, is_correct }),
-    }),
+  // Teacher — teaching material + generated exams.
+  uploadMaterial: (form: FormData) =>
+    request<{ id: string; status: string }>("/materials", { method: "POST", body: form }),
+  materialStatus: (id: string) => request<{ id: string; status: MaterialStatus }>(`/materials/${id}/status`),
+  materials: () => request<MaterialRow[]>("/materials"),
+  material: (id: string) => request<Material>(`/materials/${id}`),
+  exams: (status?: string) => request<ExamRow[]>(`/exams${status ? `?status=${status}` : ""}`),
+  exam: (id: string) => request<{ exam: Exam; questions: Question[] }>(`/exams/${id}`),
+  publishExam: (id: string) => request<{ status: string }>(`/exams/${id}/publish`, { method: "POST" }),
+  discardExamQuestion: (examId: string, qid: string) =>
+    request<{ status: string }>(`/exams/${examId}/questions/${qid}/discard`, { method: "POST" }),
 
   classStats: () => request<ClassStats>("/dashboard/class"),
   adminOverview: () => request<AdminOverview>("/admin/overview"),
   adminAutomation: () => request<AdminAutomation>("/admin/automation"),
   runAutomation: () => request<{ reports: number }>("/admin/automation/run", { method: "POST" }),
 
-  explain: (questionId: string) =>
-    request<{ explanation: string }>(`/questions/${questionId}/explain`),
-  generatePractice: (student_id: string, subject_id: string, count = 5) =>
-    request<{ practice_set_id: string; questions: Question[] }>("/practice/generate", {
+  // Student — take a published exam + tutor.
+  publishedExams: () => request<PublishedExam[]>("/exams/published"),
+  startExam: (examId: string, student_id: string) =>
+    request<{ practice_set_id: string; questions: Question[] }>(`/exams/${examId}/start`, {
       method: "POST",
-      body: JSON.stringify({ student_id, subject_id, count }),
+      body: JSON.stringify({ student_id }),
     }),
   submitPractice: (setId: string, answers: Record<string, string>) =>
     request<{ score: number; max_score: number; percent: number; details: any[] }>(
       `/practice/${setId}/submit`,
       { method: "POST", body: JSON.stringify({ answers }) },
     ),
+  explain: (questionId: string) => request<{ explanation: string }>(`/questions/${questionId}/explain`),
   tutorChat: (student_id: string, subject_id: string, message: string) =>
     request<{ answer: string }>("/tutor/chat", {
       method: "POST",

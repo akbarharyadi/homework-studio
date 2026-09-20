@@ -20,14 +20,13 @@ import (
 	"homework-studio/internal/ai"
 	"homework-studio/internal/auth"
 	"homework-studio/internal/config"
+	"homework-studio/internal/coursework"
 	"homework-studio/internal/db"
 	"homework-studio/internal/handler"
-	"homework-studio/internal/pipeline"
 	"homework-studio/internal/router"
 	"homework-studio/internal/scheduler"
 	"homework-studio/internal/store"
 	"homework-studio/internal/tutor"
-	"homework-studio/internal/vision"
 )
 
 func main() {
@@ -46,20 +45,17 @@ func main() {
 	st := store.New(pool)
 	authMgr := auth.New(cfg.SecretKey, cfg.TokenTTLMin)
 
-	// AI clients: tutor (GLM), jev/TypeAI classifier, and the GLM vision reader.
+	// AI clients: tutor + exam/notes generation (GLM), and the GLM vision reader that
+	// transcribes uploaded teaching material.
 	aiClient := ai.New(cfg.AIBaseURL, cfg.AIKey, cfg.AIModel)
-	classifierClient := ai.New(cfg.ClassifierBaseURL, cfg.ClassifierKey, cfg.ClassifierModel)
 	visionClient := ai.New(cfg.VisionBaseURL, cfg.VisionKey, cfg.VisionModel)
+	log.Printf("AI: tutor=%s(enabled=%v) reader=%s(enabled=%v)",
+		cfg.AIProvider, aiClient.Enabled(), cfg.VisionProvider, visionClient.Enabled())
 
-	extractor := vision.NewExtractor(cfg.VisionProvider, visionClient)
-	classifier := vision.NewClassifier(cfg.ClassifierProvider, classifierClient)
-	log.Printf("AI: tutor=%s(enabled=%v) reader=%s classifier=%s",
-		cfg.AIProvider, aiClient.Enabled(), extractor.Name(), classifier.Name())
-
-	pl := pipeline.New(st, extractor, classifier, cfg.ReviewThreshold, cfg.StorageDir)
 	tut := tutor.New(aiClient, st)
+	cw := coursework.New(st, visionClient, tut, 8, cfg.StorageDir)
 	sched := scheduler.New(st, cfg.SchedulerInterval, cfg.StorageDir)
-	h := handler.New(cfg, st, authMgr, pl, tut, sched)
+	h := handler.New(cfg, st, authMgr, cw, tut, sched)
 
 	// Background automation: auto-generate weekly reports, flag at-risk students,
 	// and produce recap data — on startup and on a timer.

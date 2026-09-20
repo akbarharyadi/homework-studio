@@ -12,7 +12,7 @@ export function StudentTutor() {
   const [subjectId, setSubjectId] = useState("");
   const [studentId, setStudentId] = useState("");
   const [messages, setMessages] = useState<Msg[]>([
-    { role: "tutor", text: "Hi! I'm your tutor 🙂 Ask me anything about your homework — I'll help you work it out, step by step." },
+    { role: "tutor", text: "Hi! I'm your tutor 🙂 Ask me anything about your lessons — I'll help you work it out, step by step." },
   ]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);

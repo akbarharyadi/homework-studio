@@ -14,7 +14,7 @@ function ago(iso: string): string {
 }
 
 const HOW = [
-  { title: "Reads & grades", body: "Homework is read and graded by the AI as it arrives." },
+  { title: "Reads & builds", body: "Uploaded material is read and turned into an exam." },
   { title: "Reports", body: "Each student's weekly report is written on a timer." },
   { title: "Flags", body: "Students who slip below 65% are flagged for support." },
   { title: "Delivers", body: "Parents just see it — no one pressed a button." },
@@ -95,7 +95,7 @@ export function AdminAutomationPage() {
           <CardBody>
             <h3 className="mb-3 text-lg font-semibold text-ink">AI in use</h3>
             <div className="flex flex-col items-start gap-2">
-              {providerBadge("Homework reader", a.vision_reader)}
+              {providerBadge("Material reader", a.vision_reader)}
               {providerBadge("Tutor", a.tutor_provider)}
             </div>
             <p className="mt-3 text-xs text-ink-soft">

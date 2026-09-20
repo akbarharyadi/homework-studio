@@ -7,11 +7,12 @@ import type { Role } from "./lib/api";
 
 import { Login } from "./pages/Login";
 import { TeacherDashboard } from "./pages/teacher/Dashboard";
-import { TeacherUpload } from "./pages/teacher/Upload";
-import { TeacherReview } from "./pages/teacher/Review";
+import { TeacherMaterials } from "./pages/teacher/Materials";
+import { TeacherExams } from "./pages/teacher/Exams";
+import { TeacherExamReview } from "./pages/teacher/ExamReview";
 import { ParentProgress } from "./pages/parent/Progress";
 import { ParentReport } from "./pages/parent/Report";
-import { StudentPractice } from "./pages/student/Practice";
+import { StudentExams } from "./pages/student/Exams";
 import { StudentTutor } from "./pages/student/Tutor";
 import { AdminOverviewPage } from "./pages/admin/Overview";
 import { AdminAutomationPage } from "./pages/admin/Automation";
@@ -50,19 +51,23 @@ export default function App() {
               element={<Require roles={["teacher", "admin"]}><TeacherDashboard /></Require>}
             />
             <Route
-              path="/teacher/upload"
-              element={<Require roles={["teacher", "admin"]}><TeacherUpload /></Require>}
+              path="/teacher/materials"
+              element={<Require roles={["teacher", "admin"]}><TeacherMaterials /></Require>}
             />
             <Route
-              path="/teacher/review"
-              element={<Require roles={["teacher", "admin"]}><TeacherReview /></Require>}
+              path="/teacher/exams"
+              element={<Require roles={["teacher", "admin"]}><TeacherExams /></Require>}
+            />
+            <Route
+              path="/teacher/exams/:id"
+              element={<Require roles={["teacher", "admin"]}><TeacherExamReview /></Require>}
             />
             <Route path="/parent" element={<Require roles={["parent"]}><ParentProgress /></Require>} />
             <Route
               path="/parent/report/:studentId"
               element={<Require roles={["parent"]}><ParentReport /></Require>}
             />
-            <Route path="/student" element={<Require roles={["student"]}><StudentPractice /></Require>} />
+            <Route path="/student" element={<Require roles={["student"]}><StudentExams /></Require>} />
             <Route path="/student/tutor" element={<Require roles={["student"]}><StudentTutor /></Require>} />
             <Route path="/admin" element={<Require roles={["admin"]}><AdminOverviewPage /></Require>} />
             <Route path="/admin/automation" element={<Require roles={["admin"]}><AdminAutomationPage /></Require>} />
