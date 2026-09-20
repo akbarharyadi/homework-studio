@@ -84,6 +84,8 @@ async function main() {
     // ---- Parent ----
     const parent = await login("parent@demo.id");
     await authAndGo(parent, "/parent");
+    // Wait for the AI "How to help" tip to load (GLM) before capturing.
+    await page.waitForFunction(() => document.body.innerText.includes("How to help"), { timeout: 30000 }).catch(() => {});
     await shot("05-parent-progress");
     const kids = await apiGet("/students", parent);
     if (kids?.length) {

@@ -97,8 +97,10 @@ Four roles, one pipeline:
   leaderboard), take a **published exam** (auto-graded), **practise** from the bank
   (earns XP, not graded), **review** past attempts, get **"Show me how"** explanations,
   and chat with an **AI tutor** grounded in the teacher's material.
-- **Parent** — see your child's progress in plain language: overall average, trend
-  over time, strength by subject, and a one-click **printable progress report**.
+- **Parent** — a **family dashboard**: each child's grades *and* engagement (day
+  streak, level, badges), an AI **"how to help"** tip, **compare-to-class**, a
+  **"what's new"** feed (reports, badges, new exams, at-risk alerts), and a one-click
+  **printable progress report**.
 - **Admin** — a school analytics dashboard (mastery bands, at-risk early-warning) and
   the automation controls.
 

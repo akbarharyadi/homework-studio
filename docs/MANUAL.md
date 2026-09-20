@@ -164,16 +164,26 @@ class's material** (the teacher's uploads), not the whole internet.
 
 ## 👪 Parent
 
-**What you do:** see how your child is doing, and open a printable report.
+**What you do:** see how each child is doing — grades *and* effort — get a tip on how
+to help, and open a printable report.
 
-### 1. Your child's progress
+### 1. Your children
 
-**My children** opens on your child's progress: their overall average, how many exams
-they've taken, a **trend over time**, and **strength by subject**. At the top you may
-see **This week's report** — written **automatically** by the system, no one pressing
-a button.
+**My children** opens on a card per child showing not just grades but **engagement**:
+the overall average, a **day streak**, their **level**, and **badges earned** — with a
+**"needs a look"** flag for anyone dipping below 65%. Tap a card to see that child in
+detail. Below the cards you get:
 
-![Parent progress](manual/img/05-parent-progress.png)
+- **💡 How to help** — a short, warm suggestion (AI-generated) built from your child's
+  strongest subject and the area to grow.
+- **This week's report** — written **automatically** by the system, no one pressing a
+  button.
+- **Progress over time** and **Compared to the class** (your child vs the class
+  average per subject, with a marker for the class).
+- **What's new** — a feed of reports, badges earned, new exams, and any at-risk alerts.
+- The full **exam history**.
+
+![Parent family dashboard](manual/img/05-parent-progress.png)
 
 ### 2. The printable report
 

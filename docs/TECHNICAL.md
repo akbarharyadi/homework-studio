@@ -17,7 +17,7 @@ roles and one pipeline:
 |---|---|
 | 🧑‍🏫 **Teacher** | Upload **teaching material** (PDF/image/text). The AI reads it and generates a **custom exam**, **teaching notes**, and **tutor knowledge**. Low-confidence questions open a **review** step so the teacher approves them before publishing. |
 | 🧒 **Student** | A gamified home (**XP, levels, streak, badges, leaderboard**), take a **published exam** (auto-graded), **practise** from the bank (earns XP, not graded), **review** past attempts, get **"Show me how"** explanations, and chat with an **AI tutor** grounded in the teacher's material. |
-| 👪 **Parent** | See the child's progress in plain language — average, trend, strength by subject — and open a **printable progress report**. |
+| 👪 **Parent** | A **family dashboard** — each child's grades *and* engagement (streak, level, badges), an AI **"how to help"** tip, **compare-to-class**, a **"what's new"** activity feed, and a **printable progress report**. |
 | 🏫 **Admin** | A school **analytics dashboard** (mastery bands, at-risk early-warning, roster) and the **automation controls** (a live activity feed of what the background jobs did). |
 
 The product's spine is a **document-ingestion → generation pipeline with a
@@ -428,6 +428,8 @@ All under `/api/v1`. Auth is a Bearer JWT; roles are enforced by middleware.
 | `GET` | `/students` | any | Students (scoped) |
 | `GET` | `/students/:id/progress` | any | Average, timeline, subject strengths |
 | `GET` | `/reports/student/:id` | any | Latest auto-generated weekly report |
+| `GET` | `/family` · `/family/activity` | parent | Children (grades + engagement) / "what's new" feed |
+| `GET` | `/students/:id/vs-class` · `/students/:id/tip` | parent | Child vs class average / AI "how to help" tip |
 | `POST` | `/materials` | teacher, admin | Upload material → kicks off the coursework pipeline |
 | `GET` | `/materials` · `/materials/:id` · `/:id/status` | teacher, admin | List / notes / poll status |
 | `GET` | `/exams` · `/exams/:id` | teacher, admin | List generated exams / one with its questions |
