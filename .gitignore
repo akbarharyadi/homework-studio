@@ -14,6 +14,10 @@ video/node_modules/
 video/out/
 video/public/capture/
 
+# Docs toolchain (Node)
+docs/tooling/node_modules/
+docs/tooling/.tmp/
+
 # OS / editor
 .DS_Store
 Thumbs.db

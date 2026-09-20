@@ -237,6 +237,21 @@ from another child.
 
 ---
 
+## Documentation
+
+| Doc | What's in it |
+|---|---|
+| **[Technical overview](docs/TECHNICAL.md)** ([PDF](docs/pdf/technical-overview.pdf)) | Architecture + data-flow diagrams, the ingest pipeline, the **ERD**, the AI/automation design, the API surface, and the stack with the *why* behind each choice. |
+| **[User manual](docs/MANUAL.md)** ([PDF](docs/pdf/user-manual.pdf)) | A per-role walkthrough (Teacher / Parent / Student / Admin) with screenshots of the live app. |
+| **[Case study](docs/case-study.md)** | How each feature maps to a real product's needs. |
+
+Both the Markdown docs and their PDFs are **generated from source** — screenshots are
+captured from the running app and the PDFs rendered (Mermaid diagrams and all) with a
+small offline toolchain in [`docs/tooling/`](docs/tooling/). Regenerate with
+`cd docs/tooling && npm install && npm run all`.
+
+---
+
 ## About
 
 Built by **Akbar Priyono Haryadi** as an independent demo. It assembles patterns
