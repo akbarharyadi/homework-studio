@@ -28,6 +28,9 @@ func Setup(app *fiber.App, h *handler.Handler, authMgr *auth.Manager) {
 	authed.Get("/students", h.ListStudents)
 	authed.Get("/students/:id/progress", h.StudentProgress)
 
+	// Auto-generated weekly report (produced by the background scheduler).
+	authed.Get("/reports/student/:id", h.LatestStudentReport)
+
 	// Homework.
 	authed.Get("/homeworks", h.ListHomeworks)
 	authed.Get("/homeworks/:id", h.GetHomework)

@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { api, type Student, type StudentProgress } from "../../lib/api";
-import { Button, Card, CardBody, PageTitle, Stat, Spinner, StatusBadge, Meter, Select, EmptyState } from "../../components/ui";
+import { api, type Student, type StudentProgress, type StudentReportInfo } from "../../lib/api";
+import { Button, Card, CardBody, PageTitle, Stat, Spinner, StatusBadge, Meter, Select, EmptyState, Badge } from "../../components/ui";
 
 export function ParentProgress() {
   const [children, setChildren] = useState<Student[]>([]);
   const [childId, setChildId] = useState("");
   const [progress, setProgress] = useState<StudentProgress | null>(null);
+  const [report, setReport] = useState<StudentReportInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -19,7 +20,12 @@ export function ParentProgress() {
   }, []);
 
   useEffect(() => {
-    if (childId) { setProgress(null); api.studentProgress(childId).then(setProgress); }
+    if (childId) {
+      setProgress(null);
+      setReport(null);
+      api.studentProgress(childId).then(setProgress);
+      api.latestReport(childId).then(setReport).catch(() => setReport(null));
+    }
   }, [childId]);
 
   if (loading) return <div className="flex justify-center py-24"><Spinner label="Loading…" /></div>;
@@ -47,6 +53,24 @@ export function ParentProgress() {
         <EmptyState icon="🌱" title={`${progress.student_name.split(" ")[0]} is just getting started`} body="Once homework is graded, you'll see averages, trends, and a report here." />
       ) : (
         <>
+          {report && (
+            <Card spine="grow" className="mb-4">
+              <CardBody className="flex items-start gap-3">
+                <span className="text-2xl">🗓️</span>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-semibold text-ink">This week's report</span>
+                    <Badge tone="grow">generated automatically</Badge>
+                  </div>
+                  <p className="mt-1 text-sm text-ink-soft">{report.narrative}</p>
+                  <p className="mt-1 text-xs text-ink-soft">
+                    Updated {new Date(report.generated_at).toLocaleString()} · no one had to press a button
+                  </p>
+                </div>
+              </CardBody>
+            </Card>
+          )}
+
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
             <Stat icon="🧒" label={progress.grade_level} value={progress.student_name} tone="info" />
             <Stat icon="📈" label="Overall average" value={`${progress.overall_average.toFixed(0)}%`} tone="brand" />

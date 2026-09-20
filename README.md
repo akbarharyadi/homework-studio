@@ -72,7 +72,8 @@ homework so teachers stay in control of a child's grade.
 | **Backend** | **Go + Fiber v2**, **pgx** with plain SQL (**no ORM**), `golang-jwt`, embedded SQL migrations |
 | **Frontend** | **Vite + React + TypeScript + Tailwind** (SPA), Recharts, react-dropzone, react-markdown + KaTeX |
 | **Database** | **PostgreSQL** (self-hosted; Supabase-compatible — Supabase *is* managed Postgres) |
-| **AI** | Mock by default (no key, free). OpenAI-compatible switch to **DeepSeek / GLM / TypeAI / OpenAI**. **Classification via `jev` (TypeAI)** |
+| **AI** | Mock by default (free). **GLM** for the tutor + a **vision reader** that reads the homework photo; **`jev` (TypeAI)** for classification. All OpenAI-compatible and swappable |
+| **Automation** | Async ingest pipeline (upload → gate, hands-off) + a **background scheduler** that auto-generates each student's weekly report and recap-video data |
 | **Deploy** | Docker Compose · single-server friendly |
 
 Clean architecture (`router → handler → usecase → pgx store`), so business logic
@@ -140,6 +141,15 @@ CLASSIFIER_PROVIDER=typeai
 CLASSIFIER_API_KEY=...
 CLASSIFIER_BASE_URL=https://api.typeai.co/v1
 CLASSIFIER_MODEL=jev
+
+# Read the actual homework photo with a GLM vision model (falls back to mock for
+# PDFs and on error). Key/base URL reuse AI_* by default (same GLM plan).
+VISION_PROVIDER=glm
+VISION_MODEL=glm-4v-flash          # your GLM vision-capable model
+
+# Background automation: auto-generate each student's weekly report + recap data.
+SCHEDULER_ENABLED=true
+SCHEDULER_INTERVAL=6h               # also runs once on startup
 ```
 
 The mock and real paths implement the same interfaces, so switching providers is
@@ -156,8 +166,9 @@ homework-studio/
 │   ├── cmd/seed             demo seed
 │   └── internal/
 │       ├── pipeline/        read → classify → grade → gate → decide
-│       ├── vision/          extractor + jev/TypeAI classifier (mock default)
+│       ├── vision/          GLM vision reader + jev classifier (mock default)
 │       ├── tutor/           explanations, practice generator, RAG chat
+│       ├── scheduler/       background job: auto weekly reports + recap data
 │       ├── store/           plain-SQL data access
 │       ├── handler/ router/ HTTP
 │       └── db/migrations/   embedded SQL schema

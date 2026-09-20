@@ -34,6 +34,17 @@ type Config struct {
 	ClassifierBaseURL  string
 	ClassifierModel    string
 
+	// Vision provider — reads the homework image (GLM vision by default when on).
+	// Key/BaseURL fall back to the primary AI_* creds (same GLM plan).
+	VisionProvider string
+	VisionKey      string
+	VisionBaseURL  string
+	VisionModel    string
+
+	// Background scheduler (auto weekly reports + per-student recap data).
+	SchedulerEnabled  bool
+	SchedulerInterval string
+
 	ReviewThreshold float64
 	FrontendOrigin  string
 }
@@ -63,6 +74,14 @@ func Load() *Config {
 		ClassifierKey:      env("CLASSIFIER_API_KEY", ""),
 		ClassifierBaseURL:  env("CLASSIFIER_BASE_URL", "https://api.typeai.co/v1"),
 		ClassifierModel:    env("CLASSIFIER_MODEL", "jev"),
+
+		VisionProvider: env("VISION_PROVIDER", "mock"),
+		VisionKey:      env("VISION_API_KEY", env("AI_API_KEY", "")),
+		VisionBaseURL:  env("VISION_BASE_URL", env("AI_BASE_URL", "")),
+		VisionModel:    env("VISION_MODEL", "glm-4v-flash"),
+
+		SchedulerEnabled:  env("SCHEDULER_ENABLED", "true") == "true",
+		SchedulerInterval: env("SCHEDULER_INTERVAL", "6h"),
 
 		ReviewThreshold: envFloat("REVIEW_CONFIDENCE_THRESHOLD", 0.80),
 		FrontendOrigin:  env("FRONTEND_ORIGIN", "http://localhost:3000"),

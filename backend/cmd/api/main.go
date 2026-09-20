@@ -24,6 +24,7 @@ import (
 	"homework-studio/internal/handler"
 	"homework-studio/internal/pipeline"
 	"homework-studio/internal/router"
+	"homework-studio/internal/scheduler"
 	"homework-studio/internal/store"
 	"homework-studio/internal/tutor"
 	"homework-studio/internal/vision"
@@ -45,18 +46,24 @@ func main() {
 	st := store.New(pool)
 	authMgr := auth.New(cfg.SecretKey, cfg.TokenTTLMin)
 
-	// Primary AI (extraction fallback + tutor) and the jev/TypeAI classifier.
+	// AI clients: tutor (GLM), jev/TypeAI classifier, and the GLM vision reader.
 	aiClient := ai.New(cfg.AIBaseURL, cfg.AIKey, cfg.AIModel)
 	classifierClient := ai.New(cfg.ClassifierBaseURL, cfg.ClassifierKey, cfg.ClassifierModel)
+	visionClient := ai.New(cfg.VisionBaseURL, cfg.VisionKey, cfg.VisionModel)
 
-	extractor := vision.MockExtractor{} // free, deterministic; real provider swaps here
+	extractor := vision.NewExtractor(cfg.VisionProvider, visionClient)
 	classifier := vision.NewClassifier(cfg.ClassifierProvider, classifierClient)
-	log.Printf("AI: provider=%s (enabled=%v) classifier=%s",
-		cfg.AIProvider, aiClient.Enabled(), classifier.Name())
+	log.Printf("AI: tutor=%s(enabled=%v) reader=%s classifier=%s",
+		cfg.AIProvider, aiClient.Enabled(), extractor.Name(), classifier.Name())
 
 	pl := pipeline.New(st, extractor, classifier, cfg.ReviewThreshold, cfg.StorageDir)
 	tut := tutor.New(aiClient, st)
 	h := handler.New(cfg, st, authMgr, pl, tut)
+
+	// Background automation: auto-generate weekly reports + recap data on a timer.
+	if cfg.SchedulerEnabled {
+		go scheduler.New(st, cfg.SchedulerInterval, cfg.StorageDir).Start(ctx)
+	}
 
 	app := fiber.New(fiber.Config{
 		AppName:               cfg.AppName,

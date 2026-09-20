@@ -133,6 +133,15 @@ export interface Question {
   stem: string;
   options: string[];
 }
+export interface StudentReportInfo {
+  student_id: string;
+  period_end: string;
+  overall_average: number;
+  homeworks_done: number;
+  top_subject: string;
+  narrative: string;
+  generated_at: string;
+}
 
 // ---- Endpoints ----
 export const api = {
@@ -146,6 +155,7 @@ export const api = {
   subjects: () => request<Subject[]>("/subjects"),
   students: () => request<Student[]>("/students"),
   studentProgress: (id: string) => request<StudentProgress>(`/students/${id}/progress`),
+  latestReport: (id: string) => request<StudentReportInfo>(`/reports/student/${id}`),
 
   homeworks: (params?: { student_id?: string; status?: string }) => {
     const q = new URLSearchParams(params as Record<string, string>).toString();

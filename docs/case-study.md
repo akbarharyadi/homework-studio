@@ -76,14 +76,26 @@ I've built:
 
 The reuse *is* the point: good judgement about what to build new vs. adapt.
 
+## Real AI + real automation (built)
+
+Two things that are genuinely wired, not just scaffolded:
+
+- **Vision reader** — `VISION_PROVIDER=glm` sends the uploaded homework photo to a
+  GLM vision model, which returns each answer with a confidence that drives the
+  gate. Same `Extractor` interface as the mock, so the free demo path is untouched
+  (PDFs fall back to mock — they need rasterization first).
+- **Background scheduler** — on a timer (and on startup) it generates every
+  student's weekly report + their recap-video data with no one pressing a button.
+  Parents see "generated automatically" on their dashboard; the recap JSON feeds
+  the Remotion video.
+
 ## What I'd build next
 
 1. **Self-serve enrollment funnel** (register → pick class → pay → dashboard),
    reusing a multi-step funnel + checkout I've built before.
-2. **Real vision extraction** behind the same interface (a hosted VLM reading the
-   actual worksheet image), keeping the mock path for the free demo.
-3. **Per-student "recap" video** auto-rendered from progress data (Remotion),
-   and an auto-generated weekly parent report on a schedule.
+2. **PDF rasterization** so the vision reader handles scanned PDFs, not just photos.
+3. **Close the video loop** — have the scheduler render each recap MP4 (not just its
+   data), and email/deliver the weekly report.
 
 ## Honesty notes
 
