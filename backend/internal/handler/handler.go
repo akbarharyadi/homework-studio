@@ -5,17 +5,19 @@ import (
 	"homework-studio/internal/auth"
 	"homework-studio/internal/config"
 	"homework-studio/internal/pipeline"
+	"homework-studio/internal/scheduler"
 	"homework-studio/internal/store"
 	"homework-studio/internal/tutor"
 )
 
 // Handler bundles every dependency the routes need.
 type Handler struct {
-	cfg      *config.Config
-	store    *store.Store
-	auth     *auth.Manager
-	pipeline *pipeline.Pipeline
-	tutor    *tutor.Service
+	cfg       *config.Config
+	store     *store.Store
+	auth      *auth.Manager
+	pipeline  *pipeline.Pipeline
+	tutor     *tutor.Service
+	scheduler *scheduler.Scheduler
 }
 
 func New(
@@ -24,6 +26,7 @@ func New(
 	authMgr *auth.Manager,
 	pl *pipeline.Pipeline,
 	tut *tutor.Service,
+	sched *scheduler.Scheduler,
 ) *Handler {
-	return &Handler{cfg: cfg, store: s, auth: authMgr, pipeline: pl, tutor: tut}
+	return &Handler{cfg: cfg, store: s, auth: authMgr, pipeline: pl, tutor: tut, scheduler: sched}
 }

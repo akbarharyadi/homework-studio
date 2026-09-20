@@ -36,14 +36,22 @@ wrong answer** (12 + 9 → the student wrote 20, key 21), and grades 80% — no 
 
 ### Admin monitoring & where the automation shows up
 
-An **admin** role monitors the whole school — per-student progress, class averages,
-and what needs review — and gets a dedicated **Automation** page: the weekly-report
-scheduler's live status ("running · every 6h · 0 hands on it"), which AI models are
-in use, and a **live activity feed** of every report generated on its own. That page,
-plus the "generated automatically" card parents see, is how the background automation
-surfaces in the product.
+An **admin** role gets a real analytics dashboard and the automation controls:
 
-![Admin automation monitoring](docs/screenshots/admin-automation.jpg)
+- **School overview** — **mastery bands** (mastered / on-track / needs-support), a
+  **"needs attention"** early-warning list of at-risk students, top performers,
+  subject strengths, and the full roster — each with a plain-language explanation.
+- **Automation** — the scheduler's live status ("running · every 6h · **0 hands on
+  it**"), a **Run now** trigger, the AI models in use, and a **live activity feed**
+  where the automation logs what it did: reports written **and at-risk students it
+  auto-flagged** for support.
+
+That page — plus the parents' "generated automatically" card — is how the background
+automation surfaces in the product.
+
+| School overview (analytics) | Automation (live activity) |
+|---|---|
+| ![Admin overview](docs/screenshots/admin-overview.jpg) | ![Admin automation](docs/screenshots/admin-automation.jpg) |
 
 **Animated product video** — a ~40s motion-graphics promo starring **Otto**, the
 notebook mascot, walking through the whole story (rendered from code with Remotion):

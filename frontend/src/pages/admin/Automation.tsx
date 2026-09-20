@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, type AdminAutomation } from "../../lib/api";
-import { Card, CardBody, PageTitle, Badge, Spinner, Steps } from "../../components/ui";
+import { Card, CardBody, PageTitle, Badge, Spinner, Steps, Button } from "../../components/ui";
 
 function ago(iso: string): string {
   if (!iso) return "never";
@@ -14,20 +14,31 @@ function ago(iso: string): string {
 }
 
 const HOW = [
-  { title: "Reads", body: "Homework photos are read by the AI as they arrive." },
+  { title: "Reads & grades", body: "Homework is read and graded by the AI as it arrives." },
   { title: "Reports", body: "Each student's weekly report is written on a timer." },
-  { title: "Recaps", body: "A per-student recap video's data is generated too." },
+  { title: "Flags", body: "Students who slip below 65% are flagged for support." },
   { title: "Delivers", body: "Parents just see it — no one pressed a button." },
 ];
 
 export function AdminAutomationPage() {
   const [a, setA] = useState<AdminAutomation | null>(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     api.adminAutomation().then(setA);
     const t = setInterval(() => api.adminAutomation().then(setA), 15000);
     return () => clearInterval(t);
   }, []);
+
+  async function runNow() {
+    setBusy(true);
+    try {
+      await api.runAutomation();
+      setA(await api.adminAutomation());
+    } finally {
+      setBusy(false);
+    }
+  }
 
   if (!a) return <div className="flex justify-center py-24"><Spinner label="Loading automation…" /></div>;
 
@@ -38,7 +49,8 @@ export function AdminAutomationPage() {
     <div>
       <PageTitle
         title="Automation"
-        subtitle="What Homework Studio does on its own — reading, grading, and reporting without anyone pressing a button."
+        subtitle="What Homework Studio does on its own — reading, grading, reporting, and flagging without anyone pressing a button."
+        action={<Button onClick={runNow} disabled={busy}>{busy ? "Running…" : "▶ Run now"}</Button>}
       />
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -57,10 +69,14 @@ export function AdminAutomationPage() {
               </div>
               <Badge tone="grow">every {a.interval}</Badge>
             </div>
-            <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
               <div>
                 <div className="font-display text-3xl font-bold text-ink">{a.reports_generated}</div>
                 <div className="text-sm text-ink-soft">reports generated</div>
+              </div>
+              <div>
+                <div className="font-display text-3xl font-bold text-[#a9701a]">{a.flags}</div>
+                <div className="text-sm text-ink-soft">students auto-flagged</div>
               </div>
               <div>
                 <div className="font-display text-3xl font-bold text-ink">{ago(a.last_run)}</div>
@@ -100,21 +116,21 @@ export function AdminAutomationPage() {
             <h3 className="text-lg font-semibold text-ink">Recent activity</h3>
             <span className="text-xs text-ink-soft">auto-refreshes</span>
           </div>
-          {a.recent.length === 0 ? (
-            <p className="py-8 text-center text-sm text-ink-soft">Nothing generated yet.</p>
+          {a.events.length === 0 ? (
+            <p className="py-8 text-center text-sm text-ink-soft">Nothing yet — the scheduler runs on startup and on a timer.</p>
           ) : (
             <div className="space-y-1">
-              {a.recent.map((r, i) => (
-                <div key={i} className="flex items-center gap-3 border-b border-line/60 py-2.5 last:border-0">
-                  <span className="mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full bg-grow" />
-                  <span className="text-lg">🗓️</span>
-                  <div className="flex-1 text-sm">
-                    <span className="font-semibold text-ink">Report generated</span>
-                    <span className="text-ink-soft"> for {r.student_name} · {r.overall_average.toFixed(0)}%</span>
+              {a.events.map((e, i) => {
+                const alert = e.kind === "alert";
+                return (
+                  <div key={i} className="flex items-center gap-3 border-b border-line/60 py-2.5 last:border-0">
+                    <span className={`mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full ${alert ? "bg-flag" : "bg-grow"}`} />
+                    <span className="text-lg">{alert ? "⚠️" : "🗓️"}</span>
+                    <div className={`flex-1 text-sm font-medium ${alert ? "text-[#a9701a]" : "text-ink"}`}>{e.message}</div>
+                    <span className="text-xs text-ink-soft">{ago(e.created_at)}</span>
                   </div>
-                  <span className="text-xs text-ink-soft">{ago(r.generated_at)}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardBody>

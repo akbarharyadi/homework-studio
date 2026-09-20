@@ -58,11 +58,13 @@ func main() {
 
 	pl := pipeline.New(st, extractor, classifier, cfg.ReviewThreshold, cfg.StorageDir)
 	tut := tutor.New(aiClient, st)
-	h := handler.New(cfg, st, authMgr, pl, tut)
+	sched := scheduler.New(st, cfg.SchedulerInterval, cfg.StorageDir)
+	h := handler.New(cfg, st, authMgr, pl, tut, sched)
 
-	// Background automation: auto-generate weekly reports + recap data on a timer.
+	// Background automation: auto-generate weekly reports, flag at-risk students,
+	// and produce recap data — on startup and on a timer.
 	if cfg.SchedulerEnabled {
-		go scheduler.New(st, cfg.SchedulerInterval, cfg.StorageDir).Start(ctx)
+		go sched.Start(ctx)
 	}
 
 	app := fiber.New(fiber.Config{

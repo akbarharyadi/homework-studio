@@ -61,6 +61,14 @@ func (sc *Scheduler) RunOnce(ctx context.Context) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	// Fresh event log each run (per tenant), so the activity feed shows this run.
+	seen := map[string]bool{}
+	for _, ref := range refs {
+		if !seen[ref.TenantID] {
+			sc.store.ResetEvents(ctx, ref.TenantID)
+			seen[ref.TenantID] = true
+		}
+	}
 	count := 0
 	for _, ref := range refs {
 		prog, err := sc.store.StudentProgress(ctx, ref.TenantID, ref.ID)
@@ -111,6 +119,14 @@ func (sc *Scheduler) RunOnce(ctx context.Context) (int, error) {
 		}
 		sc.writeRecap(ref.ID, recapBytes)
 		count++
+
+		// Log what the automation did — reports written, and students it flagged.
+		sc.store.InsertEvent(ctx, ref.TenantID, "report", ref.ID,
+			fmt.Sprintf("Report generated for %s · %.0f%%", prog.StudentName, prog.OverallAverage), prog.OverallAverage)
+		if done > 0 && prog.OverallAverage < 65 {
+			sc.store.InsertEvent(ctx, ref.TenantID, "alert", ref.ID,
+				fmt.Sprintf("Flagged %s for extra support · %.0f%%", prog.StudentName, prog.OverallAverage), prog.OverallAverage)
+		}
 	}
 	return count, nil
 }

@@ -36,14 +36,27 @@ func (h *Handler) AdminOverview(c *fiber.Ctx) error {
 func (h *Handler) AdminAutomation(c *fiber.Ctx) error {
 	tid := middleware.TenantID(c)
 	ctx := c.Context()
-	recent, _ := h.store.RecentReports(ctx, tid, 12)
+	events, _ := h.store.RecentEvents(ctx, tid, 15)
 	return httpx.OK(c, fiber.Map{
 		"enabled":           h.cfg.SchedulerEnabled,
 		"interval":          h.cfg.SchedulerInterval,
 		"last_run":          h.store.LastReportTime(ctx, tid),
 		"reports_generated": h.store.CountReports(ctx, tid),
+		"flags":             h.store.CountEventsByKind(ctx, tid, "alert"),
 		"vision_reader":     h.cfg.VisionProvider,
 		"tutor_provider":    h.cfg.AIProvider,
-		"recent":            recent,
+		"events":            events,
 	})
+}
+
+// RunAutomation triggers the scheduler's job immediately (the "Run now" button).
+func (h *Handler) RunAutomation(c *fiber.Ctx) error {
+	if h.scheduler == nil {
+		return httpx.BadRequest(c, "scheduler not enabled")
+	}
+	n, err := h.scheduler.RunOnce(c.Context())
+	if err != nil {
+		return httpx.Internal(c, "run failed")
+	}
+	return httpx.OK(c, fiber.Map{"reports": n})
 }

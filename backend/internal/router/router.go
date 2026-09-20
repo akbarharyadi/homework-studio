@@ -51,6 +51,7 @@ func Setup(app *fiber.App, h *handler.Handler, authMgr *auth.Manager) {
 	admin := authed.Group("/admin", middleware.RequireRole(domain.RoleAdmin))
 	admin.Get("/overview", h.AdminOverview)
 	admin.Get("/automation", h.AdminAutomation)
+	admin.Post("/automation/run", h.RunAutomation)
 
 	// AI tutor.
 	authed.Get("/questions/:id/explain", h.ExplainQuestion)

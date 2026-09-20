@@ -163,19 +163,22 @@ export interface AdminOverview {
   subject_averages: { subject: string; color: string; average: number }[];
   students_rows: AdminStudentRow[];
 }
-export interface RecentReport {
+export interface AutomationEvent {
+  kind: "report" | "alert";
   student_name: string;
-  overall_average: number;
-  generated_at: string;
+  message: string;
+  value: number;
+  created_at: string;
 }
 export interface AdminAutomation {
   enabled: boolean;
   interval: string;
   last_run: string;
   reports_generated: number;
+  flags: number;
   vision_reader: string;
   tutor_provider: string;
-  recent: RecentReport[];
+  events: AutomationEvent[];
 }
 
 // ---- Endpoints ----
@@ -212,6 +215,7 @@ export const api = {
   classStats: () => request<ClassStats>("/dashboard/class"),
   adminOverview: () => request<AdminOverview>("/admin/overview"),
   adminAutomation: () => request<AdminAutomation>("/admin/automation"),
+  runAutomation: () => request<{ reports: number }>("/admin/automation/run", { method: "POST" }),
 
   explain: (questionId: string) =>
     request<{ explanation: string }>(`/questions/${questionId}/explain`),

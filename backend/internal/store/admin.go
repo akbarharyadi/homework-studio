@@ -1,6 +1,10 @@
 package store
 
-import "context"
+import (
+	"context"
+
+	"homework-studio/internal/domain"
+)
 
 // CountUsersByRole counts users of a role in a tenant.
 func (s *Store) CountUsersByRole(ctx context.Context, tenantID, role string) int {
@@ -95,6 +99,65 @@ func (s *Store) RecentReports(ctx context.Context, tenantID string, limit int) (
 			return nil, err
 		}
 		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
+// --- Automation event log ---
+
+// AutomationEvent is one action the automation took (report written / student flagged).
+type AutomationEvent struct {
+	Kind        string  `json:"kind"`
+	StudentName string  `json:"student_name"`
+	Message     string  `json:"message"`
+	Value       float64 `json:"value"`
+	CreatedAt   string  `json:"created_at"`
+}
+
+// ResetEvents clears a tenant's event log (the scheduler regenerates it each run).
+func (s *Store) ResetEvents(ctx context.Context, tenantID string) {
+	_, _ = s.pool.Exec(ctx, `DELETE FROM automation_events WHERE tenant_id=$1`, tenantID)
+}
+
+func (s *Store) InsertEvent(ctx context.Context, tenantID, kind, studentID, message string, value float64) {
+	var sid *string
+	if studentID != "" {
+		sid = &studentID
+	}
+	_, _ = s.pool.Exec(ctx,
+		`INSERT INTO automation_events (id, tenant_id, kind, student_id, message, value)
+		 VALUES ($1,$2,$3,$4,$5,$6)`,
+		domain.NewID(), tenantID, kind, sid, message, value)
+}
+
+func (s *Store) CountEventsByKind(ctx context.Context, tenantID, kind string) int {
+	var n int
+	_ = s.pool.QueryRow(ctx, `SELECT COUNT(*) FROM automation_events WHERE tenant_id=$1 AND kind=$2`, tenantID, kind).Scan(&n)
+	return n
+}
+
+func (s *Store) RecentEvents(ctx context.Context, tenantID string, limit int) ([]AutomationEvent, error) {
+	if limit <= 0 {
+		limit = 15
+	}
+	rows, err := s.pool.Query(ctx,
+		`SELECT e.kind, COALESCE(st.name,''), e.message, e.value,
+		        to_char(e.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+		 FROM automation_events e
+		 LEFT JOIN students st ON st.id = e.student_id
+		 WHERE e.tenant_id=$1
+		 ORDER BY e.created_at DESC, e.kind LIMIT $2`, tenantID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []AutomationEvent{}
+	for rows.Next() {
+		var ev AutomationEvent
+		if err := rows.Scan(&ev.Kind, &ev.StudentName, &ev.Message, &ev.Value, &ev.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, ev)
 	}
 	return out, rows.Err()
 }
