@@ -4,6 +4,7 @@ Two videos, both rendered from code:
 
 | Composition | What it is | Size |
 |---|---|---|
+| **Explainer** | A ~2-min **narrated, step-by-step** explainer (`src/Explainer.tsx`): problem → the five steps (snap → read → grade → ask when unsure → auto report) → flagging → tutor → benefits & CTA. Otto guides it. | 1920×1080 |
 | **Promo** | A ~40s animated, promotion-only motion-graphics video starring **Otto**, the notebook mascot (`src/Mascot.tsx`) — springs, a scan-and-grade beat, an auto-report, and confetti. No tech jargon. | 1920×1080 |
 | **TeacherPromo / StudentPromo / AdminPromo** | ~15s role-specific animated promos (`src/RolePromo.tsx`), one per audience, reusing Otto + the scene parts. | 1920×1080 |
 | **Walkthrough** | A narrated, slide-based tour of the product's story (upload → read → classify → grade → gate → parent report → tutor). | 1920×1080 |

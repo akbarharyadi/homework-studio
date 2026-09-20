@@ -53,8 +53,13 @@ automation surfaces in the product.
 |---|---|
 | ![Admin overview](docs/screenshots/admin-overview.jpg) | ![Admin automation](docs/screenshots/admin-automation.jpg) |
 
-**Animated product video** — a ~40s motion-graphics promo starring **Otto**, the
-notebook mascot, walking through the whole story (rendered from code with Remotion):
+**Explainer video** — a **~2-minute narrated, step-by-step** walkthrough (the
+problem → the five steps → flagging → tutor → benefits), guided by **Otto** the
+notebook mascot (rendered from code with Remotion):
+
+[![Homework Studio — explainer](docs/demo/explainer-poster.png)](docs/demo/explainer.mp4)
+
+**Short animated promo** — a ~40s promotion-only cut:
 
 [![Homework Studio — animated promo](docs/demo/promo-poster.png)](docs/demo/promo.mp4)
 

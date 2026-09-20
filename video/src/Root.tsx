@@ -2,6 +2,7 @@ import { Composition } from "remotion";
 import { Recap, type RecapProps } from "./Recap";
 import { Walkthrough, walkthroughDuration } from "./Walkthrough";
 import { Promo, promoDuration } from "./Promo";
+import { Explainer, explainerDuration } from "./Explainer";
 import { RolePromo, rolePromoDuration, type Role } from "./RolePromo";
 import { fps } from "./theme";
 import aisha from "./data/aisha.json";
@@ -12,6 +13,14 @@ import aisha from "./data/aisha.json";
 export const RemotionRoot: React.FC = () => {
   return (
     <>
+      <Composition
+        id="Explainer"
+        component={Explainer}
+        durationInFrames={explainerDuration}
+        fps={fps}
+        width={1920}
+        height={1080}
+      />
       <Composition
         id="Promo"
         component={Promo}
