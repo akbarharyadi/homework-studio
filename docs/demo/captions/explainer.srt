@@ -3,37 +3,37 @@
 Marking homework by hand takes teachers hours every week. And parents are often left guessing how their child is really doing.
 
 2
-00:00:14,000 --> 00:00:20,096
+00:00:10,500 --> 00:00:16,596
 Homework Studio fixes that. Here's how it works, step by step.
 
 3
-00:00:22,000 --> 00:00:29,391
+00:00:18,000 --> 00:00:25,391
 Step one: just snap a photo of the homework. A worksheet, or even a page from a book.
 
 4
-00:00:36,000 --> 00:00:44,328
+00:00:27,000 --> 00:00:35,328
 Step two: the A.I. reads every question and every handwritten answer, and tells you how confident it is about each one.
 
 5
-00:00:52,000 --> 00:00:58,576
+00:00:37,000 --> 00:00:43,576
 Step three: correct answers are scored instantly, so a whole class is graded in seconds.
 
 6
-00:01:04,000 --> 00:01:15,400
+00:00:45,000 --> 00:00:56,399
 Step four, and this is the important one. If it isn't sure it read an answer correctly, it never guesses the grade. It asks the teacher to confirm.
 
 7
-00:01:20,000 --> 00:01:28,519
+00:00:58,000 --> 00:01:06,519
 Step five: every week, a warm, plain-language progress report is written for each child, completely automatically.
 
 8
-00:01:34,000 --> 00:01:39,831
+00:01:08,000 --> 00:01:13,831
 It even flags students who are falling behind, so no one slips through the cracks.
 
 9
-00:01:44,000 --> 00:01:48,847
+00:01:15,333 --> 00:01:20,181
 And when kids get stuck, a friendly tutor shows them the steps.
 
 10
-00:01:54,000 --> 00:02:04,439
+00:01:21,833 --> 00:01:32,273
 Less marking for teachers. Real visibility for parents. Learning that kids enjoy. That's Homework Studio.

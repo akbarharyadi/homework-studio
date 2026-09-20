@@ -273,16 +273,17 @@ const CTA: React.FC = () => {
   );
 };
 
+// Durations trimmed to each narration line + ~1.3s tail — no dead air between steps.
 const S = [
-  { c: Problem, d: 420 },
-  { c: Solution, d: 240 },
-  { c: Step1, d: 420 },
-  { c: Step2, d: 480 },
-  { c: Step3, d: 360 },
-  { c: Step4, d: 480 },
-  { c: Step5, d: 420 },
-  { c: FlagScene, d: 300 },
-  { c: TutorScene, d: 300 },
+  { c: Problem, d: 315 },
+  { c: Solution, d: 225 },
+  { c: Step1, d: 270 },
+  { c: Step2, d: 300 },
+  { c: Step3, d: 240 },
+  { c: Step4, d: 390 },
+  { c: Step5, d: 300 },
+  { c: FlagScene, d: 220 },
+  { c: TutorScene, d: 195 },
   { c: CTA, d: 360 },
 ];
 
