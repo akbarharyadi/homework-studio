@@ -10,7 +10,8 @@ const NAV: Record<string, { to: string; label: string; icon: string; end?: boole
     { to: "/teacher/review", label: "Review", icon: "⚖️" },
   ],
   admin: [
-    { to: "/teacher", label: "Dashboard", icon: "📊", end: true },
+    { to: "/admin", label: "Overview", icon: "🏫", end: true },
+    { to: "/admin/automation", label: "Automation", icon: "⚙️" },
     { to: "/teacher/upload", label: "Upload", icon: "📄" },
     { to: "/teacher/review", label: "Review", icon: "⚖️" },
   ],

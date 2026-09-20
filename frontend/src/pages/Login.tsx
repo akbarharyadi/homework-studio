@@ -10,6 +10,7 @@ const ROLES = [
   { role: "Teacher", email: "teacher@demo.id", icon: "🧑‍🏫", blurb: "Upload homework, watch it grade itself, and review anything unclear." },
   { role: "Parent", email: "parent@demo.id", icon: "👪", blurb: "See how your child is doing — and download a progress report." },
   { role: "Student", email: "student@demo.id", icon: "🧒", blurb: "Practise, get instant feedback, and ask the tutor for help." },
+  { role: "Admin", email: "admin@demo.id", icon: "🏫", blurb: "Monitor the whole school's progress — and watch the automation run." },
 ];
 
 export function Login() {
@@ -34,7 +35,7 @@ export function Login() {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center px-4 py-12">
+    <div className="mx-auto flex min-h-screen max-w-4xl flex-col justify-center px-4 py-12">
       <header className="mb-8 text-center">
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-brand text-4xl shadow-lift">📓</div>
         <h1 className="font-display text-4xl font-bold text-ink">Homework Studio</h1>
@@ -45,7 +46,7 @@ export function Login() {
       </header>
 
       <div className="mb-2 text-center text-sm font-semibold text-ink-soft">Pick a role to explore the demo</div>
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {ROLES.map((r) => (
           <button
             key={r.email}

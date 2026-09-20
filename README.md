@@ -34,6 +34,17 @@ wrong answer** (12 + 9 → the student wrote 20, key 21), and grades 80% — no 
 
 ![GLM-5.3-flash reads a homework photo and grades it](docs/demo/teacher-glm-vision.gif)
 
+### Admin monitoring & where the automation shows up
+
+An **admin** role monitors the whole school — per-student progress, class averages,
+and what needs review — and gets a dedicated **Automation** page: the weekly-report
+scheduler's live status ("running · every 6h · 0 hands on it"), which AI models are
+in use, and a **live activity feed** of every report generated on its own. That page,
+plus the "generated automatically" card parents see, is how the background automation
+surfaces in the product.
+
+![Admin automation monitoring](docs/screenshots/admin-automation.jpg)
+
 **Animated product video** — a ~40s motion-graphics promo starring **Otto**, the
 notebook mascot, walking through the whole story (rendered from code with Remotion):
 

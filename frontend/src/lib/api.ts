@@ -142,6 +142,41 @@ export interface StudentReportInfo {
   narrative: string;
   generated_at: string;
 }
+export interface AdminStudentRow {
+  student_id: string;
+  name: string;
+  grade_level: string;
+  average: number;
+  homeworks: number;
+  needs_review: number;
+  last_activity: string;
+}
+export interface AdminOverview {
+  students: number;
+  teachers: number;
+  parents: number;
+  homeworks_graded: number;
+  average_percent: number;
+  needs_review: number;
+  reports_generated: number;
+  score_buckets: { label: string; count: number }[];
+  subject_averages: { subject: string; color: string; average: number }[];
+  students_rows: AdminStudentRow[];
+}
+export interface RecentReport {
+  student_name: string;
+  overall_average: number;
+  generated_at: string;
+}
+export interface AdminAutomation {
+  enabled: boolean;
+  interval: string;
+  last_run: string;
+  reports_generated: number;
+  vision_reader: string;
+  tutor_provider: string;
+  recent: RecentReport[];
+}
 
 // ---- Endpoints ----
 export const api = {
@@ -175,6 +210,8 @@ export const api = {
     }),
 
   classStats: () => request<ClassStats>("/dashboard/class"),
+  adminOverview: () => request<AdminOverview>("/admin/overview"),
+  adminAutomation: () => request<AdminAutomation>("/admin/automation"),
 
   explain: (questionId: string) =>
     request<{ explanation: string }>(`/questions/${questionId}/explain`),

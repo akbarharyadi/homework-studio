@@ -13,9 +13,11 @@ import { ParentProgress } from "./pages/parent/Progress";
 import { ParentReport } from "./pages/parent/Report";
 import { StudentPractice } from "./pages/student/Practice";
 import { StudentTutor } from "./pages/student/Tutor";
+import { AdminOverviewPage } from "./pages/admin/Overview";
+import { AdminAutomationPage } from "./pages/admin/Automation";
 
 const HOME: Record<Role, string> = {
-  admin: "/teacher",
+  admin: "/admin",
   teacher: "/teacher",
   parent: "/parent",
   student: "/student",
@@ -62,6 +64,8 @@ export default function App() {
             />
             <Route path="/student" element={<Require roles={["student"]}><StudentPractice /></Require>} />
             <Route path="/student/tutor" element={<Require roles={["student"]}><StudentTutor /></Require>} />
+            <Route path="/admin" element={<Require roles={["admin"]}><AdminOverviewPage /></Require>} />
+            <Route path="/admin/automation" element={<Require roles={["admin"]}><AdminAutomationPage /></Require>} />
           </Route>
           <Route path="/" element={<HomeRedirect />} />
           <Route path="*" element={<HomeRedirect />} />
