@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, type Question, type Subject } from "../../lib/api";
-import { Button, Card, CardBody, PageTitle, Spinner, Badge } from "../../components/ui";
+import { Button, Card, CardBody, PageTitle, Badge, Select } from "../../components/ui";
 import { Markdown } from "../../components/Markdown";
 
 export function StudentPractice() {
@@ -15,137 +15,116 @@ export function StudentPractice() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    api.subjects().then((s) => {
-      setSubjects(s);
-      if (s[0]) setSubjectId(s[0].id);
-    });
+    api.subjects().then((s) => { setSubjects(s); if (s[0]) setSubjectId(s[0].id); });
     api.students().then((s) => s[0] && setStudentId(s[0].id));
   }, []);
 
   async function generate() {
     if (!subjectId || !studentId) return;
-    setBusy(true);
-    setResult(null);
-    setAnswers({});
-    setExplanations({});
+    setBusy(true); setResult(null); setAnswers({}); setExplanations({});
     try {
       const gen = await api.generatePractice(studentId, subjectId, 5);
-      setSetId(gen.practice_set_id);
-      setQuestions(gen.questions);
-    } finally {
-      setBusy(false);
-    }
+      setSetId(gen.practice_set_id); setQuestions(gen.questions);
+    } finally { setBusy(false); }
   }
 
   async function submit() {
     setBusy(true);
-    try {
-      const res = await api.submitPractice(setId, answers);
-      setResult(res);
-    } finally {
-      setBusy(false);
-    }
+    try { setResult(await api.submitPractice(setId, answers)); } finally { setBusy(false); }
   }
 
   async function explain(q: Question) {
-    if (explanations[q.id]) {
-      setExplanations((e) => ({ ...e, [q.id]: "" }));
-      return;
-    }
+    if (explanations[q.id]) { setExplanations((e) => ({ ...e, [q.id]: "" })); return; }
     const { explanation } = await api.explain(q.id);
     setExplanations((e) => ({ ...e, [q.id]: explanation }));
   }
 
   const detailFor = (qid: string) => result?.details.find((d) => d.question_id === qid);
+  const answeredCount = Object.keys(answers).length;
 
   return (
-    <div>
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <PageTitle title="Practice" subtitle="A fresh set every time — answer, then see how you did." />
-        <div className="flex items-center gap-3">
-          <select
-            value={subjectId}
-            onChange={(e) => setSubjectId(e.target.value)}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          >
-            {subjects.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
-          <Button onClick={generate} disabled={busy}>{questions.length ? "New set" : "Start practice"}</Button>
-        </div>
-      </div>
+    <div className="mx-auto max-w-2xl">
+      <PageTitle title="Practice" subtitle="A fresh set every time. Answer, then see how you did — and tap “Show me how” anytime." />
 
-      {busy && questions.length === 0 && <div className="flex justify-center py-20"><Spinner /></div>}
-
-      {result && (
-        <Card className="mb-6">
-          <CardBody className="flex items-center justify-between">
-            <div>
-              <div className="text-sm text-slate-500">Your score</div>
-              <div className="text-3xl font-bold text-brand-600">{result.percent.toFixed(0)}%</div>
+      {questions.length === 0 ? (
+        <Card spine="brand">
+          <CardBody className="flex flex-col items-center py-12 text-center">
+            <div className="text-5xl">✏️</div>
+            <h3 className="mt-3 font-display text-xl font-semibold text-ink">Ready to practise?</h3>
+            <p className="mt-1 text-sm text-ink-soft">Pick a subject and we'll make you 5 questions.</p>
+            <div className="mt-5 flex items-center gap-3">
+              <Select value={subjectId} onChange={(e) => setSubjectId(e.target.value)}>
+                {subjects.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}
+              </Select>
+              <Button size="lg" onClick={generate} disabled={busy}>{busy ? "Making…" : "Start practice"}</Button>
             </div>
-            <div className="text-4xl">{result.percent >= 80 ? "🌟" : result.percent >= 50 ? "👍" : "💪"}</div>
           </CardBody>
         </Card>
-      )}
+      ) : (
+        <>
+          <div className="mb-4 flex items-center justify-between">
+            <div className="text-sm text-ink-soft">{result ? "Here's how you did:" : `${answeredCount} of ${questions.length} answered`}</div>
+            <Button variant="outline" size="sm" onClick={generate} disabled={busy}>New set</Button>
+          </div>
 
-      <div className="space-y-4">
-        {questions.map((q, idx) => {
-          const d = detailFor(q.id);
-          return (
-            <Card key={q.id}>
-              <CardBody>
-                <div className="mb-3 flex items-start justify-between gap-3">
-                  <div className="font-medium text-slate-900">
-                    {idx + 1}. {q.stem}
-                  </div>
-                  {d && (d.correct ? <Badge tone="green">correct</Badge> : <Badge tone="red">answer: {d.answer}</Badge>)}
+          {result && (
+            <Card spine="grow" className="mb-4">
+              <CardBody className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm text-ink-soft">You scored</div>
+                  <div className="font-display text-4xl font-bold text-grow">{result.percent.toFixed(0)}%</div>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {q.options.map((opt) => {
-                    const selected = answers[q.id] === opt;
-                    const isKey = d && opt === d.answer;
-                    return (
-                      <button
-                        key={opt}
-                        disabled={!!result}
-                        onClick={() => setAnswers((a) => ({ ...a, [q.id]: opt }))}
-                        className={`rounded-lg border px-3 py-2 text-left text-sm transition ${
-                          isKey
-                            ? "border-emerald-400 bg-emerald-50"
-                            : selected
-                              ? "border-brand-500 bg-brand-50"
-                              : "border-slate-200 hover:bg-slate-50"
-                        }`}
-                      >
-                        {opt}
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="mt-3">
-                  <button onClick={() => explain(q)} className="text-sm font-medium text-brand-600 hover:underline">
-                    {explanations[q.id] ? "Hide explanation" : "💡 Show me how"}
-                  </button>
-                  {explanations[q.id] && (
-                    <div className="mt-2 rounded-lg bg-slate-50 p-3">
-                      <Markdown>{explanations[q.id]}</Markdown>
-                    </div>
-                  )}
-                </div>
+                <div className="text-5xl">{result.percent >= 80 ? "🌟" : result.percent >= 50 ? "👍" : "💪"}</div>
               </CardBody>
             </Card>
-          );
-        })}
-      </div>
+          )}
 
-      {questions.length > 0 && !result && (
-        <div className="mt-6">
-          <Button onClick={submit} disabled={busy} className="w-full sm:w-auto">
-            Submit answers
-          </Button>
-        </div>
+          <div className="space-y-4">
+            {questions.map((q, idx) => {
+              const d = detailFor(q.id);
+              return (
+                <Card key={q.id}>
+                  <CardBody>
+                    <div className="mb-3 flex items-start justify-between gap-3">
+                      <div className="font-semibold text-ink">{idx + 1}. {q.stem}</div>
+                      {d && (d.correct ? <Badge tone="grow">✓ correct</Badge> : <Badge tone="brand">answer: {d.answer}</Badge>)}
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {q.options.map((opt) => {
+                        const selected = answers[q.id] === opt;
+                        const isKey = d && opt === d.answer;
+                        return (
+                          <button
+                            key={opt}
+                            disabled={!!result}
+                            onClick={() => setAnswers((a) => ({ ...a, [q.id]: opt }))}
+                            className={`rounded-xl border px-3.5 py-2.5 text-left text-sm font-medium transition ${
+                              isKey ? "border-grow bg-grow-soft text-ink"
+                                : selected ? "border-brand bg-brand-soft text-ink"
+                                : "border-line hover:border-brand hover:bg-brand-soft/40"
+                            }`}
+                          >
+                            {opt}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <button onClick={() => explain(q)} className="mt-3 text-sm font-semibold text-brand-ink hover:underline">
+                      {explanations[q.id] ? "Hide explanation" : "💡 Show me how"}
+                    </button>
+                    {explanations[q.id] && <div className="mt-2 rounded-xl bg-paper p-3.5"><Markdown>{explanations[q.id]}</Markdown></div>}
+                  </CardBody>
+                </Card>
+              );
+            })}
+          </div>
+
+          {!result && (
+            <Button onClick={submit} disabled={busy || answeredCount === 0} size="lg" className="mt-6 w-full">
+              {answeredCount < questions.length ? `Submit (${answeredCount}/${questions.length} answered)` : "Submit answers"}
+            </Button>
+          )}
+        </>
       )}
     </div>
   );

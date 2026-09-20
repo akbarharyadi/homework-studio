@@ -7,19 +7,47 @@
   color-scheme: light;
 }
 
+/* Graph-paper background — grounds the product in math/science exercise books.
+   Faint enough to stay quiet behind content. */
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+  @apply bg-paper text-ink antialiased;
+  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+  background-image:
+    linear-gradient(rgba(24, 34, 56, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(24, 34, 56, 0.035) 1px, transparent 1px);
+  background-size: 28px 28px;
 }
 
-/* Markdown/KaTeX explanation blocks */
+h1, h2, h3 {
+  font-family: "Fraunces", Georgia, serif;
+  letter-spacing: -0.01em;
+}
+
+/* Tutor / explanation markdown */
 .prose-tutor p {
   @apply my-2 leading-relaxed;
 }
 .prose-tutor strong {
-  @apply font-semibold text-slate-900;
+  @apply font-semibold text-ink;
+}
+.prose-tutor code {
+  @apply rounded bg-paper px-1 py-0.5 text-[0.85em];
 }
 
-/* Print: only the report, no app chrome (used by the parent progress report). */
+/* Focus ring — visible, on-brand, keyboard-friendly */
+*:focus-visible {
+  outline: 2px solid #fb6a51;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Print: only the report, no app chrome. */
 @media print {
   header,
   nav {

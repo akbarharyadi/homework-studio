@@ -2,9 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { Link } from "react-router-dom";
 import { api, type HomeworkItem, type Student } from "../../lib/api";
-import { Button, Card, CardBody, PageTitle, StatusBadge, Spinner, Badge } from "../../components/ui";
+import { Button, Card, CardBody, PageTitle, StatusBadge, Spinner, Badge, Select } from "../../components/ui";
 
-type Phase = "idle" | "uploading" | "processing" | "done" | "error";
+type Phase = "idle" | "working" | "done" | "error";
 
 export function TeacherUpload() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -22,9 +22,7 @@ export function TeacherUpload() {
     });
   }, []);
 
-  const onDrop = useCallback((accepted: File[]) => {
-    if (accepted[0]) setFile(accepted[0]);
-  }, []);
+  const onDrop = useCallback((accepted: File[]) => accepted[0] && setFile(accepted[0]), []);
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: { "application/pdf": [".pdf"], "image/*": [".png", ".jpg", ".jpeg"] },
@@ -33,7 +31,7 @@ export function TeacherUpload() {
 
   async function upload() {
     if (!file || !studentId) return;
-    setPhase("uploading");
+    setPhase("working");
     setError("");
     setItems([]);
     try {
@@ -42,13 +40,10 @@ export function TeacherUpload() {
       form.append("student_id", studentId);
       form.append("title", file.name.replace(/\.[^.]+$/, ""));
       const { id } = await api.uploadHomework(form);
-      setPhase("processing");
-
-      // Poll the cheap status endpoint (like the DocumentIngest console).
       for (let i = 0; i < 30; i++) {
         const st = await api.homeworkStatus(id);
         setStatus(st.status);
-        if (st.status === "needs_review" || st.status === "graded" || st.status === "failed") {
+        if (["needs_review", "graded", "failed"].includes(st.status)) {
           const detail = await api.homework(id);
           setItems(detail.items);
           setPhase("done");
@@ -63,113 +58,80 @@ export function TeacherUpload() {
     }
   }
 
+  const flagged = items.filter((i) => i.needs_review).length;
+
   return (
-    <div>
-      <PageTitle
-        title="Upload homework"
-        subtitle="Drop a worksheet — it's read, auto-graded, and anything unclear is flagged for you."
-      />
+    <div className="mx-auto max-w-2xl">
+      <PageTitle title="Upload homework" subtitle="Drop a worksheet. It's read, graded, and anything unclear is flagged for you — usually in a couple of seconds." />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardBody className="space-y-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Student</label>
-              <select
-                value={studentId}
-                onChange={(e) => setStudentId(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              >
-                {students.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} · {s.grade_level}
-                  </option>
-                ))}
-              </select>
-            </div>
+      <Card spine="brand">
+        <CardBody className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-sm font-semibold text-ink">Whose homework is this?</label>
+            <Select value={studentId} onChange={(e) => setStudentId(e.target.value)} className="w-full">
+              {students.map((s) => (<option key={s.id} value={s.id}>{s.name} · {s.grade_level}</option>))}
+            </Select>
+          </div>
 
-            <div
-              {...getRootProps()}
-              className={`cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition ${
-                isDragActive ? "border-brand-500 bg-brand-50" : "border-slate-300 hover:border-brand-400"
-              }`}
-            >
-              <input {...getInputProps()} />
-              <div className="text-3xl">📄</div>
-              {file ? (
-                <p className="mt-2 text-sm font-medium text-slate-800">{file.name}</p>
-              ) : (
-                <p className="mt-2 text-sm text-slate-500">
-                  Drag a PDF or photo here, or click to choose. <br />
-                  <span className="text-xs">Tip: name it with “math” or “science” to see subject detection.</span>
-                </p>
+          <div
+            {...getRootProps()}
+            className={`cursor-pointer rounded-2xl border-2 border-dashed p-10 text-center transition ${
+              isDragActive ? "border-brand bg-brand-soft" : file ? "border-grow bg-grow-soft" : "border-line hover:border-brand hover:bg-brand-soft/40"
+            }`}
+          >
+            <input {...getInputProps()} />
+            <div className="text-4xl">{file ? "📎" : "📄"}</div>
+            {file ? (
+              <p className="mt-2 font-semibold text-ink">{file.name}</p>
+            ) : (
+              <>
+                <p className="mt-2 font-semibold text-ink">Drop a PDF or photo here</p>
+                <p className="mt-0.5 text-sm text-ink-soft">or click to choose a file</p>
+                <p className="mt-2 text-xs text-ink-soft">Tip: name it with “math” or “science” to see subject detection.</p>
+              </>
+            )}
+          </div>
+
+          <Button onClick={upload} disabled={!file || phase === "working"} size="lg" className="w-full">
+            {phase === "working" ? "Reading & grading…" : "Upload & grade"}
+          </Button>
+          {error && <p className="rounded-xl bg-brand-soft px-3 py-2 text-sm text-brand-ink">{error}</p>}
+          {phase === "working" && (
+            <div className="flex justify-center pt-1"><Spinner label={status ? `status: ${status.replace("_", " ")}` : "starting…"} /></div>
+          )}
+        </CardBody>
+      </Card>
+
+      {phase === "done" && (
+        <div className="mt-6">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-lg font-semibold text-ink">Result</h3>
+            <div className="flex items-center gap-2">
+              <StatusBadge status={status} />
+              {status === "needs_review" && (
+                <Link to="/teacher/review"><Button variant="outline" size="sm">Review {flagged} flagged →</Button></Link>
               )}
             </div>
-
-            <Button onClick={upload} disabled={!file || phase === "uploading" || phase === "processing"} className="w-full">
-              {phase === "uploading" || phase === "processing" ? "Processing…" : "Upload & grade"}
-            </Button>
-            {error && <div className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardBody>
-            <h3 className="mb-1 font-semibold text-slate-900">What happens after upload</h3>
-            <ol className="mb-4 list-inside list-decimal space-y-1 text-sm text-slate-500">
-              <li>Read — each question &amp; answer with a confidence score</li>
-              <li>Classify — subject detected (jev / TypeAI when configured)</li>
-              <li>Grade — correct answers scored automatically</li>
-              <li>Gate — low-confidence reads open a teacher review task</li>
-            </ol>
-
-            {(phase === "processing" || phase === "uploading") && (
-              <div className="flex items-center gap-2 text-sm text-slate-600">
-                <Spinner /> {status ? `status: ${status}` : "starting…"}
-              </div>
-            )}
-
-            {phase === "done" && (
-              <div>
-                <div className="mb-3 flex items-center gap-2">
-                  <StatusBadge status={status} />
-                  {status === "needs_review" && (
-                    <Link to="/teacher/review" className="text-sm font-medium text-brand-600 hover:underline">
-                      → open review queue
-                    </Link>
-                  )}
+          </div>
+          <div className="space-y-2">
+            {items.map((it) => (
+              <div key={it.id} className={`flex items-center justify-between gap-3 rounded-xl border p-3.5 ${it.needs_review ? "border-flag/40 bg-flag-soft" : "border-line bg-surface"}`}>
+                <div className="min-w-0">
+                  <div className="font-semibold text-ink">Q{it.question_no}. {it.question_text}</div>
+                  <div className="text-sm text-ink-soft">answered <b className="text-ink">{it.student_answer}</b> · key {it.correct_answer}</div>
                 </div>
-                <div className="space-y-2">
-                  {items.map((it) => (
-                    <div
-                      key={it.id}
-                      className={`rounded-lg border p-3 text-sm ${
-                        it.needs_review ? "border-amber-200 bg-amber-50" : "border-slate-100"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-slate-800">
-                          Q{it.question_no}. {it.question_text}
-                        </span>
-                        {it.needs_review ? (
-                          <Badge tone="amber">review · {(it.confidence * 100).toFixed(0)}%</Badge>
-                        ) : it.is_correct ? (
-                          <Badge tone="green">correct</Badge>
-                        ) : (
-                          <Badge tone="red">wrong</Badge>
-                        )}
-                      </div>
-                      <div className="mt-1 text-slate-500">
-                        answered <b>{it.student_answer}</b> · key {it.correct_answer}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                {it.needs_review ? (
+                  <Badge tone="flag">review · {(it.confidence * 100).toFixed(0)}%</Badge>
+                ) : it.is_correct ? (
+                  <Badge tone="grow">✓ correct</Badge>
+                ) : (
+                  <Badge tone="brand">✗ wrong</Badge>
+                )}
               </div>
-            )}
-          </CardBody>
-        </Card>
-      </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

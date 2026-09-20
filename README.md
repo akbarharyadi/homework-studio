@@ -10,9 +10,11 @@ with a single `docker compose up`.
 > **Independent portfolio demo.** Not affiliated with any company. All data is
 > synthetic. Built to demonstrate full-stack + AI-automation engineering.
 
-| Sign in | Teacher dashboard | Parent progress |
-|---|---|---|
-| ![Login](docs/screenshots/login.jpg) | ![Dashboard](docs/screenshots/teacher-dashboard.jpg) | ![Parent](docs/screenshots/parent-progress.jpg) |
+| Sign in — pick a role | Teacher dashboard |
+|---|---|
+| ![Login](docs/screenshots/login.jpg) | ![Dashboard](docs/screenshots/teacher-dashboard.jpg) |
+| **Upload → read → grade → gate** | **Parent progress** |
+| ![Upload](docs/screenshots/teacher-upload.jpg) | ![Parent](docs/screenshots/parent-progress.jpg) |
 
 **Videos** (rendered from code with Remotion — see [`video/`](video/)):
 a product **walkthrough** and a data-driven **per-student recap**.
