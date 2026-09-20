@@ -1,0 +1,61 @@
+name: Deploy
+
+# Pull-based CD. The target server sits on a LAN (192.168.1.13) that GitHub's cloud
+# runners can't reach, so a *self-hosted* runner on the server picks the job up and
+# deploys locally. Register it once (see docs/DEPLOY.md) with the label `homework`.
+#
+# The GLM key lives in an Actions secret (GLM_API_KEY), never in git — the job writes
+# docker/.env from it at deploy time.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: "Re-seed the demo dataset after deploy (destroys current data)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to the server
+    runs-on: [self-hosted, homework]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write docker/.env from secrets
+        run: |
+          cat > docker/.env <<EOF
+          AI_PROVIDER=glm
+          AI_API_KEY=${{ secrets.GLM_API_KEY }}
+          AI_BASE_URL=https://api.z.ai/api/coding/paas/v4
+          AI_MODEL=glm-5.3
+          VISION_PROVIDER=glm
+          VISION_MODEL=glm-5.3-flash
+          EOF
+
+      - name: Build + start the stack
+        run: docker compose -f docker/docker-compose.yml --env-file docker/.env --profile full up -d --build
+
+      - name: Wait for the API
+        run: |
+          for i in $(seq 1 40); do
+            if curl -sf localhost:8080/health >/dev/null; then echo "API up"; exit 0; fi
+            sleep 3
+          done
+          echo "API did not come up"; docker compose -f docker/docker-compose.yml logs backend; exit 1
+
+      - name: Seed (first deploy or when requested)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.seed }}
+        run: docker compose -f docker/docker-compose.yml --env-file docker/.env --profile tools run --build --rm seed
+
+      - name: Prune old images
+        if: always()
+        run: docker image prune -f

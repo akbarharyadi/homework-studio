@@ -1,0 +1,92 @@
+name: Docs auto-update
+
+# Meta-automation: whenever the app changes, bring the real stack up, seed it, and
+# regenerate the manual screenshots + PDFs from the running app so the docs never
+# drift. Any change is committed straight back to the branch.
+#
+# Runs on GitHub-hosted runners (Docker + Chromium are available). It seeds the demo
+# dataset, so it needs no GLM key — every screenshot comes from seeded data.
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "frontend/**"
+      - "backend/**"
+      - "docs/**.md"
+      - "docs/tooling/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regenerate:
+    name: Regenerate screenshots + PDFs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Start the stack
+        run: docker compose -f docker/docker-compose.yml --profile full up -d --build
+
+      - name: Wait for the API
+        run: |
+          for i in $(seq 1 40); do
+            if curl -sf localhost:8080/health >/dev/null; then echo "API up"; exit 0; fi
+            sleep 3
+          done
+          echo "API did not come up"; docker compose -f docker/docker-compose.yml logs backend; exit 1
+
+      - name: Seed the demo dataset
+        run: docker compose -f docker/docker-compose.yml --profile tools run --build --rm seed
+
+      - name: Re-run the scheduler on the seeded data
+        # The backend's startup run happened before the seed; restart so the
+        # automation page (reports, flags, remediation) reflects real data.
+        run: |
+          docker compose -f docker/docker-compose.yml restart backend
+          sleep 6
+
+      - name: Wait for the frontend
+        run: |
+          for i in $(seq 1 40); do
+            if curl -sf localhost:3000 >/dev/null; then echo "web up"; exit 0; fi
+            sleep 3
+          done
+          echo "frontend did not come up"; exit 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: docs/tooling/package-lock.json
+
+      - name: Regenerate screenshots + PDFs
+        working-directory: docs/tooling
+        env:
+          APP_BASE: http://localhost:3000
+        run: |
+          npm ci
+          npm run all
+
+      - name: Stop the stack
+        if: always()
+        run: docker compose -f docker/docker-compose.yml --profile full --profile tools down -v
+
+      - name: Commit any doc changes
+        run: |
+          git config user.name "homework-studio-bot"
+          git config user.email "actions@github.com"
+          git add docs/manual/img docs/pdf
+          if git diff --cached --quiet; then
+            echo "Docs already up to date — nothing to commit."
+          else
+            git commit -m "docs: auto-refresh screenshots + PDFs [skip ci]"
+            git push
+          fi

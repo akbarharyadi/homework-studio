@@ -1,0 +1,13 @@
+# Cloudflare Tunnel config for Homework Studio.
+# Copy to ~/.cloudflared/config.yml on the server and fill in the tunnel id.
+# The tunnel gives homeworkstudio.akbarharyadi.com a public HTTPS address with no
+# open inbound ports — cloudflared dials out to Cloudflare and forwards to the
+# frontend container, which proxies /api/ to the backend.
+
+tunnel: <TUNNEL_ID>
+credentials-file: /home/haryadi/.cloudflared/<TUNNEL_ID>.json
+
+ingress:
+  - hostname: homeworkstudio.akbarharyadi.com
+    service: http://localhost:3000
+  - service: http_status:404
