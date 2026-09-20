@@ -1,8 +1,10 @@
 import {
   AbsoluteFill,
+  Audio,
   Sequence,
   interpolate,
   spring,
+  staticFile,
   useCurrentFrame,
   useVideoConfig,
   Easing,
@@ -563,6 +565,7 @@ export const Promo: React.FC = () => {
         const el = (
           <Sequence key={i} from={from} durationInFrames={s.d}>
             <s.c />
+            <Audio src={staticFile(`vo/promo_${i + 1}.mp3`)} />
           </Sequence>
         );
         from += s.d;

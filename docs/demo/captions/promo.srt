@@ -1,0 +1,23 @@
+1
+00:00:00,000 --> 00:00:04,511
+Meet Homework Studio, where learning actually feels playful.
+
+2
+00:00:05,000 --> 00:00:08,455
+Just snap a photo of your child's homework.
+
+3
+00:00:11,333 --> 00:00:16,109
+The A.I. reads every answer in seconds, and grades it for you.
+
+4
+00:00:18,666 --> 00:00:24,210
+If it's unsure, it asks the teacher. Never a guessed grade.
+
+5
+00:00:24,666 --> 00:00:29,490
+Parents get a warm progress report, generated automatically.
+
+6
+00:00:31,666 --> 00:00:39,874
+Plus a friendly tutor for the kids. Homework Studio. Serious software, made playful.

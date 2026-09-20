@@ -1,0 +1,11 @@
+1
+00:00:00,000 --> 00:00:03,096
+Homework Studio, for students.
+
+2
+00:00:04,333 --> 00:00:09,445
+Fresh practice, instant feedback, and a tutor that shows the steps.
+
+3
+00:00:10,333 --> 00:00:13,213
+Learning you actually want to do.

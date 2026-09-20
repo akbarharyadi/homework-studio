@@ -1,4 +1,4 @@
-import { AbsoluteFill, Sequence, interpolate, Easing, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Audio, Sequence, interpolate, Easing, staticFile, useCurrentFrame } from "remotion";
 import { theme } from "./theme";
 import { fraunces, jakarta } from "./fonts";
 import { Mascot, type Pose } from "./Mascot";
@@ -155,12 +155,15 @@ export const RolePromo: React.FC<{ role?: Role }> = ({ role = "teacher" }) => {
     <AbsoluteFill style={{ backgroundColor: theme.paper }}>
       <Sequence from={0} durationInFrames={130}>
         <Intro title={cfg.title} sub={cfg.sub} pose={cfg.intro} />
+        <Audio src={staticFile(`vo/${role}_1.mp3`)} />
       </Sequence>
       <Sequence from={130} durationInFrames={180}>
         <cfg.Feature />
+        <Audio src={staticFile(`vo/${role}_2.mp3`)} />
       </Sequence>
       <Sequence from={310} durationInFrames={160}>
         <Outro tagline={cfg.tagline} pose={cfg.outro} />
+        <Audio src={staticFile(`vo/${role}_3.mp3`)} />
       </Sequence>
     </AbsoluteFill>
   );

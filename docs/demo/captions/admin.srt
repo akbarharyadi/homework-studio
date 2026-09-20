@@ -1,0 +1,11 @@
+1
+00:00:00,000 --> 00:00:03,263
+Homework Studio, for your whole school.
+
+2
+00:00:04,333 --> 00:00:08,557
+See every class, and let the reports write themselves.
+
+3
+00:00:10,333 --> 00:00:13,381
+The whole school, on autopilot.
