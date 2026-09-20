@@ -12,3 +12,18 @@ export function Markdown({ children }: { children: string }) {
     </div>
   );
 }
+
+// Inline variant for short strings that may contain LaTeX ($...$) — e.g. a
+// question stem or an answer option. Renders the paragraph as a <span> so it
+// stays inline inside headings and buttons.
+export function MathText({ children, className }: { children: string; className?: string }) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkMath]}
+      rehypePlugins={[rehypeKatex]}
+      components={{ p: ({ children }) => <span className={className}>{children}</span> }}
+    >
+      {children}
+    </ReactMarkdown>
+  );
+}

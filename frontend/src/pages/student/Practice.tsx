@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, type Question, type Subject } from "../../lib/api";
 import { Button, Card, CardBody, PageTitle, Badge, Select } from "../../components/ui";
-import { Markdown } from "../../components/Markdown";
+import { Markdown, MathText } from "../../components/Markdown";
 
 export function StudentPractice() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -86,7 +86,7 @@ export function StudentPractice() {
                 <Card key={q.id}>
                   <CardBody>
                     <div className="mb-3 flex items-start justify-between gap-3">
-                      <div className="font-semibold text-ink">{idx + 1}. {q.stem}</div>
+                      <div className="font-semibold text-ink">{idx + 1}. <MathText>{q.stem}</MathText></div>
                       {d && (d.correct ? <Badge tone="grow">✓ correct</Badge> : <Badge tone="brand">answer: {d.answer}</Badge>)}
                     </div>
                     <div className="grid gap-2 sm:grid-cols-2">
@@ -104,7 +104,7 @@ export function StudentPractice() {
                                 : "border-line hover:border-brand hover:bg-brand-soft/40"
                             }`}
                           >
-                            {opt}
+                            <MathText>{opt}</MathText>
                           </button>
                         );
                       })}
