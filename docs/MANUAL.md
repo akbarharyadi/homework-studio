@@ -127,6 +127,10 @@ quick chips (average, best score). It shows your **badges** (earned + still-lock
 a hint), your **subject mastery**, your **recent results**, and the **class
 leaderboard**. Earn XP by taking exams and practising.
 
+If you're finding a subject hard, a **🎯 Recommended for you** card appears: the
+automation has built you a short practice set in your weakest subject. Tap **Start now**
+to go straight into it (it earns XP, and isn't counted in your grades).
+
 ![Student home — XP, streak, badges, leaderboard](manual/img/07-student-home.png)
 
 ### 2. Take an exam
@@ -221,10 +225,19 @@ question**).
 
 ### 3. Automation
 
-**Automation** is where the background work shows up: the scheduler's status
-("running · every 6h · **0 hands on it**"), how many reports it wrote and how many
-students it **auto-flagged**, which **AI models** are in use, and a **live activity
-feed**. Press **▶ Run now** to trigger a run immediately.
+**Automation** is a **jobs dashboard** — every job the platform runs on its own, with
+its trigger, schedule and how many times it has fired:
+
+- **Material → exam** — reads an uploaded file into an exam (on upload).
+- **Auto-publish clean exams** — an exam with no flagged question publishes itself, so
+  the teacher only reviews the flagged ones (on generate).
+- **Progress reports** — each child's attempts → a warm report (every 6h).
+- **At-risk flagging** — students under 65% are surfaced for support (every 6h).
+- **Auto-remediation** — each flagged student gets a targeted practice set in their
+  weakest subject, which they see as "Recommended for you" (every 6h).
+
+It also shows the **GLM models** doing the work and a colour-coded **live activity
+feed** of what just happened. Press **▶ Run scheduled jobs now** to trigger a run.
 
 ![Admin — automation](manual/img/14-admin-automation.png)
 

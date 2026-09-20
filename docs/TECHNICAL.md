@@ -51,23 +51,21 @@ flowchart LR
         PG[("tenant-scoped tables<br/>ULID PKs · plain SQL")]
     end
 
-    subgraph AI["AI providers (OpenAI-compatible, optional)"]
+    subgraph AI["AI providers (OpenAI-compatible)"]
         VIS["Material reader — GLM-5.3-flash"]
         TUT["Exam / notes / tutor — GLM / DeepSeek"]
-        MOCK["Deterministic mock (default, no key)"]
     end
 
     UI -->|HTTPS JSON| STATIC
     UI -->|/api/v1/*| PROXY --> RT --> HD --> UC --> ST --> PG
     UC -.->|transcribe material| VIS
     UC -.->|generate / explain / chat| TUT
-    VIS -. fallback .-> MOCK
-    TUT -. fallback .-> MOCK
 ```
 
 **One request path, one data store, swappable AI.** The SPA talks only to the Go
-JSON API. Every AI touchpoint has a deterministic **mock** fallback, so the whole
-system runs with **no API key** and upgrades to real models with an env change.
+JSON API. Every AI touchpoint goes through one OpenAI-compatible client, so the whole
+system runs on **GLM** and swaps to DeepSeek / OpenAI with an env change. A key is
+required; without one, generation degrades gracefully rather than fabricating output.
 
 ---
 
@@ -85,8 +83,8 @@ system runs with **no API key** and upgrades to real models with an env change.
 | **Frontend** | **Vite + React 18 + TypeScript + Tailwind** | Fast dev server + tiny production bundle. A plain SPA (no SSR) because this is an authenticated app, not a content site. **The same React/Tailwind components move to Next.js unchanged** if that stack is preferred. |
 | **Charts / UX** | Recharts · react-dropzone · react-markdown + KaTeX | Recharts for the score distributions and trends; react-dropzone for the upload; react-markdown + KaTeX to render the tutor's LaTeX explanations. |
 | **PWA** | **vite-plugin-pwa** (Workbox) | Installable app + offline app shell via an auto-updating service worker. |
-| **AI client** | One **OpenAI-compatible** client | GLM, DeepSeek, TypeAI (jev), and OpenAI all speak the same `/chat/completions` shape — only base URL / key / model change. No per-vendor SDKs. |
-| **Deploy** | **Docker Compose** | `postgres + backend + frontend` on one host behind nginx. One `docker compose up`. |
+| **AI client** | One **OpenAI-compatible** client | GLM, DeepSeek and OpenAI all speak the same `/chat/completions` shape — only base URL / key / model change. No per-vendor SDKs. |
+| **Deploy** | **Docker Compose** + GitHub Actions | `postgres + backend + frontend` on one host behind nginx; pull-based CD to the server via a self-hosted runner, public HTTPS via a Cloudflare Tunnel (§10, [DEPLOY.md](DEPLOY.md)). |
 
 ---
 
@@ -127,18 +125,17 @@ backend/
     ├── middleware/ RequireAuth, RequireRole
     ├── store/      plain-SQL access — one file per aggregate (material, exams, tutor, admin, …)
     ├── vision/     ReadText: transcribe a document (image/PDF via the vision model, text direct)
-    ├── ai/         tiny OpenAI-compatible chat client (GLM/DeepSeek/TypeAI/OpenAI) + ChatVision
-    ├── coursework/ read material → index (RAG) → teaching notes → generate exam → gate
+    ├── ai/         tiny OpenAI-compatible chat client (GLM/DeepSeek/OpenAI) + ChatVision
+    ├── coursework/ read material → index (RAG) → teaching notes → generate exam → gate → auto-publish
     ├── tutor/      exam generator, teaching notes, explanations + grading, RAG chat
-    ├── scheduler/  background job: weekly reports + recap data + auto-flagging
+    ├── scheduler/  background job: weekly reports + recap data + at-risk flagging + remediation
     ├── handler/    HTTP handlers
     └── router/     route table
 ```
 
 **Dependency rule:** handlers depend on use cases; use cases depend on the store
-and on the `ai.Client` *interface* — never on a concrete provider. Swapping GLM for
-DeepSeek, or a real model for the mock, is a constructor argument (or an env flag),
-not a code change.
+and on the `ai.Client` — never on a concrete provider. Swapping GLM for DeepSeek or
+OpenAI is a base-URL/model change (an env flag), not a code change.
 
 ---
 
@@ -294,6 +291,7 @@ erDiagram
         jsonb snapshot "frozen questions"
         float percent
         varchar status "open|finished"
+        varchar source "'' | remediation"
     }
     material_chunks {
         varchar id PK
@@ -344,11 +342,13 @@ erDiagram
 
 ---
 
-## 7. AI architecture — swappable, mock by default
+## 7. AI architecture — one client, swappable providers
 
-Everything AI goes through one **OpenAI-compatible** client. `Enabled()` is true only
-when both a key and base URL are set; otherwise callers fall back to a deterministic
-mock, so the demo is free and reproducible.
+Everything AI goes through one **OpenAI-compatible** client. It runs on **GLM** (the
+Z.AI coding plan); `Enabled()` is true when a key and base URL are set. A key is
+required — there is no mock provider. If the model is unreachable, callers degrade
+honestly (reveal the stored answer / return the retrieved material) rather than
+fabricate output.
 
 ```mermaid
 flowchart LR
@@ -360,36 +360,42 @@ flowchart LR
     subgraph Providers["Same shape — change base URL / key / model"]
         GLM["Zhipu GLM<br/>api.z.ai/…/coding/paas/v4"]
         DS["DeepSeek"]
-        TY["TypeAI (jev)"]
         OA["OpenAI"]
     end
-    MOCK["Deterministic mock<br/>(no key → free)"]
 
     PIPE --> CLI
     TUTX --> CLI
-    CLI -->|Enabled| GLM & DS & TY & OA
-    CLI -->|not configured| MOCK
+    CLI -->|Bearer key| GLM & DS & OA
 ```
 
-| Touchpoint | Env | Real provider | Fallback |
+| Touchpoint | Env | What GLM does | If unreachable |
 |---|---|---|---|
-| **Material reader (vision)** | `VISION_PROVIDER=glm`, `VISION_MODEL=glm-5.3-flash` | GLM transcribes the uploaded PDF/image to text (PDFs rasterized with poppler `pdftoppm` first). | Text files read directly; a labelled placeholder otherwise. |
-| **Exam + notes + tutor** | `AI_PROVIDER=glm`, `AI_MODEL=glm-5.3`, `AI_BASE_URL=…/coding/paas/v4` | GLM authors exam questions (with confidence) grounded in the material, writes teaching notes + LaTeX explanations, and answers RAG chat. | Bank-sampled exam / excerpt notes / mock explanation / canned chat. |
+| **Material reader (vision)** | `VISION_PROVIDER=glm`, `VISION_MODEL=glm-5.3-flash` | Transcribes the uploaded PDF/image to text (PDFs rasterized with poppler `pdftoppm` first). | Text files read directly; a labelled placeholder otherwise. |
+| **Exam + notes + tutor** | `AI_PROVIDER=glm`, `AI_MODEL=glm-5.3`, `AI_BASE_URL=…/coding/paas/v4` | Authors exam questions (with confidence) grounded in the material, writes teaching notes + LaTeX explanations, and answers RAG chat. | Bank-sampled exam / excerpt notes / stored explanation / a short nudge. |
 
-The client is OpenAI-compatible, so **DeepSeek, TypeAI (`jev`), or OpenAI** drop in by
-changing base URL + key + model. The **confidence threshold** for flagging a generated
-question is `0.80` (a question is also flagged if its answer isn't among its options).
+The client is OpenAI-compatible, so **DeepSeek or OpenAI** drop in by changing base URL
++ key + model. The **confidence threshold** for flagging a generated question is `0.80`
+(a question is also flagged if its answer isn't among its options); a clean exam
+(nothing flagged) **auto-publishes**.
 
 ---
 
 ## 8. Automation — the hands-off layer
 
-Two things run without anyone pressing a button:
+Five jobs run without anyone pressing a button, surfaced on the admin **Automation
+jobs dashboard** (each with its trigger, schedule and run count):
 
-1. **The coursework pipeline** (§5) — every material read, indexed, and turned into a
-   gated exam on upload.
-2. **A background scheduler** — runs once on startup and then every
-   `SCHEDULER_INTERVAL` (default `6h`).
+**On upload (event-driven):**
+1. **Material → exam** (§5) — every material read, indexed, and turned into a gated exam.
+2. **Auto-publish clean exams** — a generated exam with **no** low-confidence question
+   publishes itself; anything flagged waits for the teacher.
+
+**On a timer** — the background scheduler runs once on startup, then every
+`SCHEDULER_INTERVAL` (default `6h`):
+3. **Weekly reports** — each student's attempts → a warm report + recap-video JSON.
+4. **At-risk flagging** — students under 65% are flagged for support.
+5. **Auto-remediation** — each flagged student gets a targeted practice set in their
+   **weakest subject** (idempotent), which they see as "Recommended for you".
 
 ```mermaid
 flowchart TD
@@ -401,18 +407,21 @@ flowchart TD
     RECAP --> UPSERT["Upsert student_reports (one latest per student)"]
     UPSERT --> EV1["Log event: 'Report generated for &lt;name&gt; · NN%'"]
     EV1 --> RISK{"done &gt; 0 and avg &lt; 65%?"}
-    RISK -->|yes| EV2["Log alert: 'Flagged &lt;name&gt; for extra support'"]
+    RISK -->|yes| EV2["Log alert: 'Flagged &lt;name&gt;'"]
+    EV2 --> REM["EnsureRemediationSet in weakest subject + log 'Built &lt;name&gt; a practice set'"]
     RISK -->|no| NEXT["next student"]
-    EV2 --> NEXT
-    EV1 --> FEED["Admin → Automation: live activity feed"]
+    REM --> NEXT
+    EV1 --> FEED["Admin → Automation: jobs dashboard + live feed"]
     EV2 --> FEED
+    REM --> STU["Student → 'Recommended for you' practice"]
     UPSERT --> CARD["Parent → 'This week's report · generated automatically'"]
 ```
 
-The `automation_events` log is what surfaces the automation in the UI: the **admin
-Automation page** shows a live feed (reports written + students auto-flagged) with a
-**Run now** trigger, and the **parent page** shows the auto-generated report card.
-That is how a background job becomes something a user can *see*.
+The `automation_events` log is what surfaces the timed jobs in the UI: the **admin
+Automation page** shows a jobs dashboard + a live feed (reports, flags, remediation,
+auto-publish) with a **Run now** trigger; the **student home** shows coach-recommended
+practice; the **parent page** shows the auto-generated report card. That is how a
+background job becomes something a user can *see*.
 
 ---
 
@@ -436,12 +445,14 @@ All under `/api/v1`. Auth is a Bearer JWT; roles are enforced by middleware.
 | `POST` | `/exams/:id/publish` | teacher, admin | Approve remaining questions → publish |
 | `POST` | `/exams/:id/questions/:qid/discard` | teacher, admin | Drop a rejected question |
 | `GET` | `/dashboard/class` | teacher, admin | Class stats + distribution |
-| `GET` | `/admin/overview` · `/admin/automation` | admin | School analytics / scheduler feed |
+| `GET` | `/admin/overview` · `/admin/automation` | admin | School analytics / automation jobs dashboard + feed |
 | `GET` | `/admin/engagement` · `/admin/trend` · `/admin/teaching` | admin | Engagement / 14-day trend / per-exam analytics |
-| `POST` | `/admin/automation/run` | admin | Trigger the scheduler now |
+| `POST` | `/admin/automation/run` | admin | Trigger the scheduled jobs now |
 | `GET` | `/exams/published` | any | Published exams a student can take |
 | `POST` | `/exams/:id/start` | any | Snapshot a published exam into an attempt |
+| `GET` | `/students/:id/recommended` | any | Coach-recommended (auto-remediation) practice sets |
 | `POST` | `/practice/generate` | any | Ungraded practice set from the bank (earns XP) |
+| `GET` | `/practice/:id` | any | Resume an open set (e.g. a recommended one) |
 | `POST` | `/practice/:id/submit` | any | Auto-grade an attempt (persists per-question answers) |
 | `GET` | `/students/:id/gamification` | any | XP / level / streak / badges (derived) |
 | `GET` | `/students/:id/attempts` · `/attempts/:id/review` | any | Results list / review one attempt |
@@ -465,9 +476,25 @@ flowchart LR
         PGc[("postgres<br/>pgvector:pg16 :5433→5432<br/>volume: pgdata")]
         SEED["seed (one-shot, profile: tools)"]
     end
-    Browser --> FE --> BE --> PGc
+    Browser --> CF["Cloudflare Tunnel<br/>homeworkstudio.akbarharyadi.com"] -. cloudflared .-> FE --> BE --> PGc
     SEED --> PGc
 ```
+
+**CI/CD (GitHub Actions).** Three workflows in `.github/workflows/`:
+
+- **CI** — `go build/vet/test` + the frontend `tsc` + build, on every push/PR.
+- **Docs** — meta-automation: on an app change it stands the real stack up, seeds it,
+  reruns the scheduler, regenerates the manual screenshots + PDFs from the running app,
+  and commits any drift back. The docs can't fall behind the app.
+- **Deploy** — pull-based CD. The target server is on a LAN GitHub's cloud can't reach,
+  so a **self-hosted runner on the server** picks up the job and runs `docker compose up`.
+  The GLM key comes from an Actions secret, written to `docker/.env` at deploy time —
+  never committed.
+
+**Public HTTPS with no open ports.** A **Cloudflare Tunnel** (`cloudflared` on the
+server) publishes `homeworkstudio.akbarharyadi.com` → the frontend container; the
+frontend proxies `/api/` to the backend, so only the tunnel egresses. Full runbook in
+**[DEPLOY.md](DEPLOY.md)**.
 
 ```bash
 # 1. Start Postgres + backend + frontend
@@ -477,16 +504,16 @@ docker compose -f docker/docker-compose.yml --profile tools run --rm seed
 # 3. Open  → frontend http://localhost:3000 · API http://localhost:8080/health
 ```
 
-**Config** is environment-first (`internal/config`). Real AI is opt-in: copy
+**Config** is environment-first (`internal/config`). The AI runs on GLM: copy
 `docker/.env.example` → `docker/.env` (gitignored) with a GLM key and
-`docker compose up` runs on real models. Defaults keep the stack on the free mock.
+`docker compose up` runs the full pipeline. A key is required — there is no mock.
 
 | Variable | Default | Meaning |
 |---|---|---|
 | `DATABASE_URL` | local Postgres | pgx connection string |
-| `AI_PROVIDER` / `AI_MODEL` / `AI_BASE_URL` / `AI_API_KEY` | `mock` | Exam + notes + tutor |
-| `VISION_PROVIDER` / `VISION_MODEL` | `mock` / `glm-5.3-flash` | Material reader (transcription) |
-| `SCHEDULER_ENABLED` / `SCHEDULER_INTERVAL` | `true` / `6h` | Background reports |
+| `AI_PROVIDER` / `AI_MODEL` / `AI_BASE_URL` / `AI_API_KEY` | `glm` / `glm-5.3` / Z.AI coding URL / — | Exam + notes + tutor (set the key) |
+| `VISION_PROVIDER` / `VISION_MODEL` | `glm` / `glm-5.3-flash` | Material reader (transcription) |
+| `SCHEDULER_ENABLED` / `SCHEDULER_INTERVAL` | `true` / `6h` | Reports + flagging + remediation |
 | `ACCESS_TOKEN_TTL_MINUTES` | `720` | JWT lifetime |
 
 ---
@@ -500,8 +527,9 @@ docker compose -f docker/docker-compose.yml --profile tools run --rm seed
   pipeline runs in a goroutine; the SPA polls `/materials/:id/status`. Simple and
   dependency-free (no queue broker). For higher volume this is where a real
   worker/queue slots in — the pipeline is already a self-contained unit.
-- **Mock-by-default AI.** The demo is free and reproducible; every AI path degrades
-  gracefully to a deterministic result. Real models are one env flag away.
+- **One AI client, GLM-only.** Every AI path goes through one OpenAI-compatible client
+  running on GLM; if the model is unreachable it degrades honestly (stored answer /
+  retrieved material) instead of fabricating. Switching provider is one env flag.
 - **JSONB embeddings, pgvector image.** Keeps the demo dependency-light while leaving
   a zero-migration path to a real vector index.
 - **Stateless JWT.** No session store to run; fits a single self-hosted binary.

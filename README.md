@@ -34,11 +34,11 @@ that kids actually want to chase.
 
 ### Real GLM — it reads your material and writes the exam
 
-With a GLM key, **GLM-5.3-flash** transcribes the uploaded PDF/image (poppler
-rasterizes PDFs first) and **glm-5.3** authors multiple-choice questions grounded in
-it, each with a self-reported confidence. Questions below the bar are flagged; the
-teacher reviews and publishes. Everything runs on a free deterministic mock without a
-key.
+**GLM-5.3-flash** transcribes the uploaded PDF/image (poppler rasterizes PDFs first)
+and **glm-5.3** authors multiple-choice questions grounded in it, each with a
+self-reported confidence. Questions below the bar are flagged for the teacher; a clean
+exam (nothing flagged) **publishes itself**. GLM is the real, only AI path — set a key
+(`docker/.env`) and the whole pipeline runs on it.
 
 ### Admin monitoring & where the automation shows up
 
@@ -47,13 +47,15 @@ An **admin** role gets a real analytics dashboard and the automation controls:
 - **School overview** — **mastery bands** (mastered / on-track / needs-support), a
   **"needs attention"** early-warning list of at-risk students, top performers,
   subject strengths, and the full roster — each with a plain-language explanation.
-- **Automation** — the scheduler's live status ("running · every 6h · **0 hands on
-  it**"), a **Run now** trigger, the AI models in use, and a **live activity feed**
-  where the automation logs what it did: reports written **and at-risk students it
-  auto-flagged** for support.
+- **Automation** — a **jobs dashboard**: every automated job the platform runs
+  (material→exam, **auto-publish** clean exams, weekly reports, **at-risk flagging**,
+  **auto-remediation**) with its trigger, schedule and run count, the GLM models doing
+  the work, a **Run now** trigger, and a colour-coded **live activity feed** of what
+  the automation just did.
 
-That page — plus the parents' "generated automatically" card — is how the background
-automation surfaces in the product.
+That page — plus the parents' "generated automatically" card and the students'
+"Recommended for you" practice — is how the background automation surfaces in the
+product.
 
 | School overview (analytics) | Automation (live activity) |
 |---|---|
@@ -125,9 +127,9 @@ before students see them.
 | **Backend** | **Go + Fiber v2**, **pgx** with plain SQL (**no ORM**), `golang-jwt`, embedded SQL migrations |
 | **Frontend** | **Vite + React + TypeScript + Tailwind** (SPA), Recharts, react-dropzone, react-markdown + KaTeX; **responsive down to phone width** and an installable **PWA** (offline app shell via a service worker) |
 | **Database** | **PostgreSQL** (self-hosted; Supabase-compatible — Supabase *is* managed Postgres) |
-| **AI** | Mock by default (free). **GLM** authors the exam + teaching notes + tutor replies, and a **vision reader** transcribes the uploaded material; **DeepSeek / `jev` (TypeAI) / OpenAI** drop in (all OpenAI-compatible) |
-| **Automation** | Async coursework pipeline (material → exam, hands-off) + a **background scheduler** that auto-generates each student's weekly report and recap-video data |
-| **Deploy** | Docker Compose · single-server friendly |
+| **AI** | **GLM** (Z.AI coding plan) authors the exam + teaching notes + tutor replies, and **GLM-5.3-flash** transcribes the uploaded material; **DeepSeek / OpenAI** drop in (all OpenAI-compatible). A key is required — there is no mock path |
+| **Automation** | Async coursework pipeline (material → exam → **auto-publish** when clean) + a **background scheduler** that writes weekly reports, **flags at-risk students** and **builds them remediation practice**, all surfaced on an admin **jobs dashboard** |
+| **Deploy** | Docker Compose · pull-based CD to a self-hosted server via a **GitHub Actions self-hosted runner** · public HTTPS through a **Cloudflare Tunnel** — see **[docs/DEPLOY.md](docs/DEPLOY.md)** |
 
 Clean architecture (`router → handler → usecase → pgx store`), so business logic
 (exam generation, grading, explanations) is isolated from HTTP and SQL.
@@ -136,7 +138,9 @@ Clean architecture (`router → handler → usecase → pgx store`), so business
 
 ## Quick start
 
-Prerequisites: **Docker**. (For local dev without Docker: Go 1.24+, Node 22+.)
+Prerequisites: **Docker** and a **GLM key** (Z.AI coding plan) for the AI features.
+Copy `docker/.env.example` → `docker/.env` (gitignored) and add your `AI_API_KEY`.
+(For local dev without Docker: Go 1.26+, Node 22+.)
 
 ```bash
 # 1. Start Postgres + backend + frontend
@@ -178,9 +182,8 @@ cd frontend && npm install && npm run dev   # http://localhost:3000
 
 ## AI configuration
 
-Everything runs on a **deterministic mock provider by default** — no API key, no
-spend — so the hosted demo is free and reproducible. Flip to a real provider with
-env vars (all OpenAI-compatible):
+The app runs on **GLM** (the Z.AI coding plan, OpenAI-compatible). A key is
+**required** — there is no mock path. Set it with env vars:
 
 ```bash
 # Exam + teaching notes + tutor — GLM via the Z.AI coding plan (OpenAI-compatible)
@@ -188,22 +191,24 @@ AI_PROVIDER=glm
 AI_API_KEY=<your Z.AI coding-plan key>
 AI_BASE_URL=https://api.z.ai/api/coding/paas/v4
 AI_MODEL=glm-5.3                    # glm-4.6 also works
-# (DeepSeek / TypeAI (jev) / OpenAI work too — same shape, just swap base URL + model.)
+# (DeepSeek / OpenAI work too — same shape, just swap base URL + model.)
 
 # Read the uploaded material — GLM-5.3-flash transcribes a PDF/image to text.
-# Falls back to reading text files directly. Key/base URL reuse AI_* by default.
+# Text files (.txt/.md/.csv) are read directly. Key/base URL reuse AI_* by default.
 VISION_PROVIDER=glm
 VISION_MODEL=glm-5.3-flash
 
-# Background automation: auto-generate each student's weekly report + recap data.
+# Background automation: weekly reports, at-risk flagging + remediation practice.
 SCHEDULER_ENABLED=true
 SCHEDULER_INTERVAL=6h               # also runs once on startup
 ```
 
-The mock and real paths implement the same interfaces, so switching providers is
+Providers are swappable (any OpenAI-compatible base URL + model), so changing model is
 a config change, not a rewrite. **For the Docker stack**, copy
 `docker/.env.example` → `docker/.env` (gitignored) with your key and
 `docker compose up` runs on real GLM — reading your material and authoring the exam.
+Without a key the app still boots, but generation, the tutor and material reading are
+off.
 
 ---
 
