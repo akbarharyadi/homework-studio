@@ -208,14 +208,25 @@ distribution, and the full roster — each with a plain-language note.
 
 ![Admin — school overview](manual/img/12-admin-overview.png)
 
-### 2. Automation
+### 2. Insights
+
+**Insights** goes beyond grades. **Engagement** shows how much the school is actually
+doing — students active today, average streak, total XP, badges earned, and the
+**streak leaders**. **Trend (last 14 days)** charts the school average and daily
+activity. **Teaching & exams** is the content pipeline — materials in, AI-generated
+exams out — with **per-exam performance** (takers, average, and the **hardest
+question**).
+
+![Admin — insights](manual/img/13-admin-insights.png)
+
+### 3. Automation
 
 **Automation** is where the background work shows up: the scheduler's status
 ("running · every 6h · **0 hands on it**"), how many reports it wrote and how many
 students it **auto-flagged**, which **AI models** are in use, and a **live activity
 feed**. Press **▶ Run now** to trigger a run immediately.
 
-![Admin — automation](manual/img/13-admin-automation.png)
+![Admin — automation](manual/img/14-admin-automation.png)
 
 > Admins can also open the teacher's **Materials** and **Exams** tools from the nav.
 

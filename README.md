@@ -101,8 +101,9 @@ Four roles, one pipeline:
   streak, level, badges), an AI **"how to help"** tip, **compare-to-class**, a
   **"what's new"** feed (reports, badges, new exams, at-risk alerts), and a one-click
   **printable progress report**.
-- **Admin** — a school analytics dashboard (mastery bands, at-risk early-warning) and
-  the automation controls.
+- **Admin** — a school analytics dashboard (mastery bands, at-risk early-warning), an
+  **Insights** page (engagement/XP, a 14-day trend, and per-exam analytics including
+  the hardest question), and the automation controls.
 
 ### The confidence gate (now on the AI's generated questions)
 

@@ -18,7 +18,7 @@ roles and one pipeline:
 | 🧑‍🏫 **Teacher** | Upload **teaching material** (PDF/image/text). The AI reads it and generates a **custom exam**, **teaching notes**, and **tutor knowledge**. Low-confidence questions open a **review** step so the teacher approves them before publishing. |
 | 🧒 **Student** | A gamified home (**XP, levels, streak, badges, leaderboard**), take a **published exam** (auto-graded), **practise** from the bank (earns XP, not graded), **review** past attempts, get **"Show me how"** explanations, and chat with an **AI tutor** grounded in the teacher's material. |
 | 👪 **Parent** | A **family dashboard** — each child's grades *and* engagement (streak, level, badges), an AI **"how to help"** tip, **compare-to-class**, a **"what's new"** activity feed, and a **printable progress report**. |
-| 🏫 **Admin** | A school **analytics dashboard** (mastery bands, at-risk early-warning, roster) and the **automation controls** (a live activity feed of what the background jobs did). |
+| 🏫 **Admin** | A school **analytics dashboard** (mastery bands, at-risk early-warning, roster), an **Insights** page (engagement/XP, a 14-day trend, and per-exam analytics incl. the hardest question), and the **automation controls** (a live activity feed of what the background jobs did). |
 
 The product's spine is a **document-ingestion → generation pipeline with a
 human-in-the-loop confidence gate** — the teacher's material is read and turned into
@@ -437,6 +437,7 @@ All under `/api/v1`. Auth is a Bearer JWT; roles are enforced by middleware.
 | `POST` | `/exams/:id/questions/:qid/discard` | teacher, admin | Drop a rejected question |
 | `GET` | `/dashboard/class` | teacher, admin | Class stats + distribution |
 | `GET` | `/admin/overview` · `/admin/automation` | admin | School analytics / scheduler feed |
+| `GET` | `/admin/engagement` · `/admin/trend` · `/admin/teaching` | admin | Engagement / 14-day trend / per-exam analytics |
 | `POST` | `/admin/automation/run` | admin | Trigger the scheduler now |
 | `GET` | `/exams/published` | any | Published exams a student can take |
 | `POST` | `/exams/:id/start` | any | Snapshot a published exam into an attempt |

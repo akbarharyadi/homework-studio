@@ -135,8 +135,11 @@ async function main() {
     const admin = await login("admin@demo.id");
     await authAndGo(admin, "/admin");
     await shot("12-admin-overview");
+    await authAndGo(admin, "/admin/insights");
+    await settle(2200); // let the trend chart finish its animation
+    await shot("13-admin-insights");
     await authAndGo(admin, "/admin/automation");
-    await shot("13-admin-automation");
+    await shot("14-admin-automation");
 
     console.log("\nAll screenshots in", OUT);
   } finally {
