@@ -16,7 +16,7 @@ roles and one pipeline:
 | Role | What they do |
 |---|---|
 | 🧑‍🏫 **Teacher** | Upload **teaching material** (PDF/image/text). The AI reads it and generates a **custom exam**, **teaching notes**, and **tutor knowledge**. Low-confidence questions open a **review** step so the teacher approves them before publishing. |
-| 🧒 **Student** | Take a **published exam**, get instant auto-graded scoring, tap **"Show me how"** for a step-by-step (LaTeX) explanation, and chat with an **AI tutor** grounded in the teacher's material. |
+| 🧒 **Student** | A gamified home (**XP, levels, streak, badges, leaderboard**), take a **published exam** (auto-graded), **practise** from the bank (earns XP, not graded), **review** past attempts, get **"Show me how"** explanations, and chat with an **AI tutor** grounded in the teacher's material. |
 | 👪 **Parent** | See the child's progress in plain language — average, trend, strength by subject — and open a **printable progress report**. |
 | 🏫 **Admin** | A school **analytics dashboard** (mastery bands, at-risk early-warning, roster) and the **automation controls** (a live activity feed of what the background jobs did). |
 
@@ -328,7 +328,12 @@ erDiagram
   attempt. Finished attempts (`status='finished'`, `percent`) are the single source
   for all progress/dashboard/admin analytics.
 - Student **progress, class stats, and the admin roster all derive from finished
-  `practice_sets`** — there is no separate results table.
+  `practice_sets`** — there is no separate results table. Grades count only exam
+  attempts (`exam_id IS NOT NULL`); ungraded practice (`exam_id IS NULL`) still earns
+  XP.
+- **Gamification (XP / level / streak / badges) and the leaderboard are computed on
+  the fly** from those attempts — no points ledger or badge tables. Per-question
+  answers are saved to `practice_answers` so an attempt can be reviewed.
 - **`material_chunks.embedding`** is JSONB today (cosine similarity in Go). The
   Postgres image already ships **pgvector**, so this becomes a real `vector` column
   + ANN index with no database migration.
@@ -433,7 +438,11 @@ All under `/api/v1`. Auth is a Bearer JWT; roles are enforced by middleware.
 | `POST` | `/admin/automation/run` | admin | Trigger the scheduler now |
 | `GET` | `/exams/published` | any | Published exams a student can take |
 | `POST` | `/exams/:id/start` | any | Snapshot a published exam into an attempt |
-| `POST` | `/practice/:id/submit` | any | Auto-grade an attempt |
+| `POST` | `/practice/generate` | any | Ungraded practice set from the bank (earns XP) |
+| `POST` | `/practice/:id/submit` | any | Auto-grade an attempt (persists per-question answers) |
+| `GET` | `/students/:id/gamification` | any | XP / level / streak / badges (derived) |
+| `GET` | `/students/:id/attempts` · `/attempts/:id/review` | any | Results list / review one attempt |
+| `GET` | `/leaderboard` | any | Class ranking by XP |
 | `GET` | `/questions/:id/explain` | any | Step-by-step explanation |
 | `POST` | `/tutor/chat` | any | RAG tutor chat |
 

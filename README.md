@@ -24,6 +24,14 @@ the least-confident questions are flagged for the teacher → publish → studen
 it, auto-graded.** The human-in-the-loop confidence gate sits on the AI's generated
 questions, so nothing reaches students the teacher hasn't approved.
 
+### For students, it's a game
+
+XP, levels, a day **streak**, **badges**, and a class **leaderboard** — plus free
+**practice** (earns XP, not graded) and a **review** of every past attempt. Progress
+that kids actually want to chase.
+
+![Gamified student home](docs/manual/img/07-student-home.png)
+
 ### Real GLM — it reads your material and writes the exam
 
 With a GLM key, **GLM-5.3-flash** transcribes the uploaded PDF/image (poppler
@@ -85,9 +93,10 @@ Four roles, one pipeline:
   generates a **custom exam** (each question with a confidence), **teaching notes**,
   and **tutor knowledge**. Low-confidence questions are flagged; the teacher reviews,
   discards any duds, and **publishes**.
-- **Student** — take a **published exam**, get instant auto-graded scoring, tap
-  **"Show me how"** for a step-by-step (LaTeX-ready) explanation, and chat with an
-  **AI tutor** grounded in the teacher's material.
+- **Student** — a **gamified home** (XP, levels, day streak, badges, class
+  leaderboard), take a **published exam** (auto-graded), **practise** from the bank
+  (earns XP, not graded), **review** past attempts, get **"Show me how"** explanations,
+  and chat with an **AI tutor** grounded in the teacher's material.
 - **Parent** — see your child's progress in plain language: overall average, trend
   over time, strength by subject, and a one-click **printable progress report**.
 - **Admin** — a school analytics dashboard (mastery bands, at-risk early-warning) and

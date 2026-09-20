@@ -20,7 +20,7 @@ pick a **role** to explore the demo — one tap signs you in as a sample user.
 |---|---|---|
 | 🧑‍🏫 Teacher | `teacher@demo.id` | Class dashboard |
 | 👪 Parent | `parent@demo.id` | Your children's progress |
-| 🧒 Student | `student@demo.id` | Your exams |
+| 🧒 Student | `student@demo.id` | Your learning home (XP, streak, badges) |
 | 🏫 Admin | `admin@demo.id` | School overview |
 
 Switch roles anytime with **Switch role** in the top-right corner.
@@ -118,29 +118,47 @@ count — one or more questions the AI wasn't confident about, waiting for you.
 
 ## 🧒 Student
 
-**What you do:** take the exams your teacher published, see how you did, and learn.
+**What you do:** take exams, practise, learn from your mistakes, and level up.
 
-### 1. Your exams
+### 1. Your learning home
 
-The **Exams** page lists every exam published for your subjects. Pick one and press
-**Start exam**.
+**Home** is a gamified overview: your **level ring** and **XP**, a **day streak**, and
+quick chips (average, best score). It shows your **badges** (earned + still-locked with
+a hint), your **subject mastery**, your **recent results**, and the **class
+leaderboard**. Earn XP by taking exams and practising.
 
-![Your published exams](manual/img/07-student-exams.png)
+![Student home — XP, streak, badges, leaderboard](manual/img/07-student-home.png)
 
-### 2. Answer, submit, and learn
+### 2. Take an exam
 
-Tap an option for each question, then **Submit** to see your score. At any time tap
-**💡 Show me how** for a step-by-step explanation (math renders properly). When you're
-done you get an instant percentage and can review every answer.
+**Exams** lists every exam your teacher published. Pick one, press **Start exam**,
+answer each question, then **Submit** for an instant score. Tap **💡 Show me how**
+anytime for a step-by-step explanation (math renders properly).
 
 ![Taking an exam](manual/img/08-student-exam.png)
 
-### 3. Ask the tutor
+### 3. Practise (drill mode)
+
+**Practice** lets you drill from the question bank by **subject** and **level** —
+untimed and low-stakes. It **earns XP and keeps your streak**, but is **not counted in
+your grades**, so you can learn without pressure.
+
+![Practice / drill mode](manual/img/09-student-practice.png)
+
+### 4. Review your results
+
+From **Home → See all** (or a recent result), open any past attempt to see **every
+question, your answer vs the correct one, and the explanation** — so you learn from
+what you missed.
+
+![Reviewing a past attempt](manual/img/10-student-review.png)
+
+### 5. Ask the tutor
 
 Open **Tutor** to chat. It's patient, explains step by step, and answers from **your
 class's material** (the teacher's uploads), not the whole internet.
 
-![Ask the tutor](manual/img/09-student-tutor.png)
+![Ask the tutor](manual/img/11-student-tutor.png)
 
 ---
 
@@ -178,7 +196,7 @@ bands** (mastered / on track / needs support). The **Needs attention** panel sur
 students below 65% first. Below are top performers, strength by subject, the score
 distribution, and the full roster — each with a plain-language note.
 
-![Admin — school overview](manual/img/10-admin-overview.png)
+![Admin — school overview](manual/img/12-admin-overview.png)
 
 ### 2. Automation
 
@@ -187,7 +205,7 @@ distribution, and the full roster — each with a plain-language note.
 students it **auto-flagged**, which **AI models** are in use, and a **live activity
 feed**. Press **▶ Run now** to trigger a run immediately.
 
-![Admin — automation](manual/img/11-admin-automation.png)
+![Admin — automation](manual/img/13-admin-automation.png)
 
 > Admins can also open the teacher's **Materials** and **Exams** tools from the nav.
 
