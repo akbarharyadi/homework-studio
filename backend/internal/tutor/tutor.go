@@ -6,6 +6,7 @@ package tutor
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -73,6 +74,13 @@ func mockExplanation(q *domain.Question) string {
 func (s *Service) GeneratePractice(ctx context.Context, tenantID, studentID, subjectID string, count int) (*domain.PracticeSet, []domain.Question, error) {
 	if count <= 0 {
 		count = 5
+	}
+	// GLM authors fresh questions when a real client is configured; the question
+	// bank (stratified sample below) is the free/offline fallback.
+	if s.client.Enabled() {
+		if ps, qs, err := s.aiGeneratePractice(ctx, tenantID, studentID, subjectID, count); err == nil {
+			return ps, qs, nil
+		}
 	}
 	// Stratified sample: aim for a spread of easy/medium/hard.
 	buckets := []string{domain.DiffEasy, domain.DiffMedium, domain.DiffHard}
@@ -244,4 +252,92 @@ func overlap(a, b map[string]struct{}) int {
 		}
 	}
 	return n
+}
+
+// --- GLM-authored practice ---
+
+type aiQuestion struct {
+	Stem        string   `json:"stem"`
+	Options     []string `json:"options"`
+	Answer      string   `json:"answer"`
+	Explanation string   `json:"explanation"`
+	Difficulty  string   `json:"difficulty"`
+}
+
+// aiGeneratePractice asks GLM to write fresh, age-appropriate questions, persists
+// them (marked ai_generated) so explanations work, and freezes them into a set.
+func (s *Service) aiGeneratePractice(ctx context.Context, tenantID, studentID, subjectID string, count int) (*domain.PracticeSet, []domain.Question, error) {
+	sub, err := s.store.GetSubjectByID(ctx, subjectID)
+	if err != nil {
+		return nil, nil, err
+	}
+	prompt := fmt.Sprintf(`Write %d multiple-choice %s questions for a Grade 4 student (about 9-10 years old).
+Return ONLY a JSON array, no prose or code fences, each item exactly:
+{"stem":"...","options":["...","...","...","..."],"answer":"<must exactly match one option>","explanation":"one short encouraging line, use $...$ for any math","difficulty":"easy|medium|hard"}
+Make them varied and fun. Four options each. The answer must be one of the options verbatim.`, count, sub.Name)
+
+	out, usage, err := s.client.Chat(ctx, []ai.Message{
+		{Role: "system", Content: "You are a warm primary-school teacher who writes clear practice questions. Output strict JSON only."},
+		{Role: "user", Content: prompt},
+	}, 0.7, 2048)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var raw []aiQuestion
+	if err := parseJSONArray(out, &raw); err != nil {
+		return nil, nil, err
+	}
+
+	chosen := make([]domain.Question, 0, count)
+	for _, r := range raw {
+		if strings.TrimSpace(r.Stem) == "" || len(r.Options) < 2 || strings.TrimSpace(r.Answer) == "" {
+			continue
+		}
+		q := &domain.Question{
+			TenantID: tenantID, SubjectID: subjectID, Topic: "AI practice",
+			Difficulty: normDifficulty(r.Difficulty), Stem: r.Stem, Options: r.Options,
+			Answer: r.Answer, Explanation: r.Explanation, Marks: 1, AIGenerated: true,
+		}
+		if err := s.store.CreateQuestion(ctx, q); err == nil {
+			chosen = append(chosen, *q)
+		}
+		if len(chosen) >= count {
+			break
+		}
+	}
+	if len(chosen) == 0 {
+		return nil, nil, fmt.Errorf("no valid AI questions")
+	}
+
+	sid := studentID
+	s.store.LogAIUsage(ctx, tenantID, &sid, "practice_generation", usage.PromptTokens, usage.CompletionTokens, s.client.Model())
+
+	ps := &domain.PracticeSet{TenantID: tenantID, StudentID: studentID, SubjectID: subjectID}
+	if err := s.store.CreatePracticeSet(ctx, ps, chosen); err != nil {
+		return nil, nil, err
+	}
+	return ps, stripAnswers(chosen), nil
+}
+
+func normDifficulty(d string) string {
+	switch strings.ToLower(strings.TrimSpace(d)) {
+	case "easy":
+		return domain.DiffEasy
+	case "hard":
+		return domain.DiffHard
+	default:
+		return domain.DiffMedium
+	}
+}
+
+// parseJSONArray tolerates models that wrap a JSON array in prose or ```json fences.
+func parseJSONArray(raw string, v any) error {
+	s := strings.TrimSpace(raw)
+	if i := strings.Index(s, "["); i >= 0 {
+		if j := strings.LastIndex(s, "]"); j >= i {
+			s = s[i : j+1]
+		}
+	}
+	return json.Unmarshal([]byte(s), v)
 }

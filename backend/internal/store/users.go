@@ -109,6 +109,18 @@ func (s *Store) SubjectByName(ctx context.Context, tenantID, name string) (*doma
 	return sub, nil
 }
 
+// GetSubjectByID returns a subject by id, or ErrNotFound.
+func (s *Store) GetSubjectByID(ctx context.Context, id string) (*domain.Subject, error) {
+	sub := &domain.Subject{}
+	err := s.pool.QueryRow(ctx,
+		`SELECT id, tenant_id, name, color FROM subjects WHERE id=$1`, id).
+		Scan(&sub.ID, &sub.TenantID, &sub.Name, &sub.Color)
+	if err != nil {
+		return nil, noRows(err)
+	}
+	return sub, nil
+}
+
 // --- Students ---
 
 func (s *Store) CreateStudent(ctx context.Context, st *domain.Student) error {
