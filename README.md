@@ -1,38 +1,36 @@
 # 📚 Homework Studio
 
-**Homework in → auto-graded, confidence-gated, and turned into a warm progress report — plus an AI tutor.**
+**Teaching material in → AI-generated, teacher-approved exams out — auto-graded, turned into warm progress reports, plus an AI tutor.**
 
 A small, self-hosted EdTech platform that shows the *platform layer* around a
-kids' learning product: student homework, teacher review workflows, parent
-progress visibility, and an AI practice tutor. Built to run on your own server
-with a single `docker compose up`.
+kids' learning product: a teacher uploads material, the AI turns it into an exam
+(that the teacher reviews and publishes), students take it and are auto-graded,
+parents see the progress, and an AI tutor answers from the class's own material.
+Built to run on your own server with a single `docker compose up`.
 
 > **Independent portfolio demo.** Not affiliated with any company. All data is
 > synthetic. Built to demonstrate full-stack + AI-automation engineering.
 
-| Sign in — pick a role | Teacher dashboard |
+| Upload teaching material | The AI writes the exam — teacher reviews & publishes |
 |---|---|
-| ![Login](docs/screenshots/login.jpg) | ![Dashboard](docs/screenshots/teacher-dashboard.jpg) |
-| **Upload → read → grade → gate** | **Parent progress** |
-| ![Upload](docs/screenshots/teacher-upload.jpg) | ![Parent](docs/screenshots/parent-progress.jpg) |
+| ![Materials](docs/manual/img/03-teacher-materials.png) | ![Exam review](docs/manual/img/04-teacher-exam-review.png) |
+| **Students take it — auto-graded** | **Parents see the progress** |
+| ![Student exam](docs/manual/img/08-student-exam.png) | ![Parent progress](docs/manual/img/05-parent-progress.png) |
 
-### Watch it run — end to end, one per role
+### The idea in one line
 
-Real screen recordings of the live app (synthetic data):
+**Material → AI reads it → generates an exam + teaching notes + tutor knowledge →
+the least-confident questions are flagged for the teacher → publish → students take
+it, auto-graded.** The human-in-the-loop confidence gate sits on the AI's generated
+questions, so nothing reaches students the teacher hasn't approved.
 
-| 🧑‍🏫 Teacher | 👪 Parent | 🧒 Student |
-|---|---|---|
-| Upload → auto-grade → **review the flagged answer** → re-graded → dashboard updates | See the child's progress → open the **printable report** | Practice → **100%** → "show me how" (LaTeX) → **ask the tutor** |
-| ![Teacher demo](docs/demo/teacher-demo.gif) | ![Parent demo](docs/demo/parent-demo.gif) | ![Student demo](docs/demo/student-demo.gif) |
+### Real GLM — it reads your material and writes the exam
 
-### Real GLM vision — it reads an actual photo
-
-With `VISION_PROVIDER=glm`, an uploaded homework **photo or scanned PDF** (poppler
-rasterizes the PDF) is read by **GLM-5.3-flash**: it extracts each question and the
-handwritten answer, computes the key, and grades. Here it reads a photo, **catches the
-wrong answer** (12 + 9 → the student wrote 20, key 21), and grades 80% — no mock.
-
-![GLM-5.3-flash reads a homework photo and grades it](docs/demo/teacher-glm-vision.gif)
+With a GLM key, **GLM-5.3-flash** transcribes the uploaded PDF/image (poppler
+rasterizes PDFs first) and **glm-5.3** authors multiple-choice questions grounded in
+it, each with a self-reported confidence. Questions below the bar are flagged; the
+teacher reviews and publishes. Everything runs on a free deterministic mock without a
+key.
 
 ### Admin monitoring & where the automation shows up
 
@@ -51,13 +49,16 @@ automation surfaces in the product.
 
 | School overview (analytics) | Automation (live activity) |
 |---|---|
-| ![Admin overview](docs/screenshots/admin-overview.jpg) | ![Admin automation](docs/screenshots/admin-automation.jpg) |
+| ![Admin overview](docs/manual/img/10-admin-overview.png) | ![Admin automation](docs/manual/img/11-admin-automation.png) |
 
-**Explainer video** — a **~2-minute narrated, step-by-step** walkthrough (the
-problem → the five steps → flagging → tutor → benefits), guided by **Otto** the
-notebook mascot (rendered from code with Remotion):
+### Demo videos
 
-[![Homework Studio — explainer](docs/demo/explainer-poster.png)](docs/demo/explainer.mp4)
+Animated, narrated videos (built from code with **Remotion** + a neural voiceover,
+guided by **Otto** the notebook mascot).
+
+> ℹ️ The videos illustrate an **earlier iteration** of the product (homework grading).
+> The app and the [manual](docs/MANUAL.md) now center on **material → exam generation**;
+> the videos will be re-cut to match.
 
 **Short animated promo** — a ~40s promotion-only cut:
 
@@ -78,32 +79,33 @@ a slide **walkthrough** (`walkthrough.mp4`) and a data-driven **per-student reca
 
 ## What it does
 
-Three roles, one pipeline:
+Four roles, one pipeline:
 
-- **Teacher** — upload a kid's homework (PDF/photo). It's read question-by-question
-  with a **calibrated confidence per answer**, auto-graded, and anything the model
-  wasn't sure it read correctly opens a **review task** instead of silently
-  grading it. Resolve the task and the homework re-grades itself.
-- **Parent** — see your child's progress in plain language: overall average,
-  trend over time, strength by subject, and a one-click **printable progress
-  report** (Save as PDF).
-- **Student** — generate a fresh **practice set**, get instant scoring, tap
+- **Teacher** — upload **teaching material** (PDF/image/text). The AI reads it and
+  generates a **custom exam** (each question with a confidence), **teaching notes**,
+  and **tutor knowledge**. Low-confidence questions are flagged; the teacher reviews,
+  discards any duds, and **publishes**.
+- **Student** — take a **published exam**, get instant auto-graded scoring, tap
   **"Show me how"** for a step-by-step (LaTeX-ready) explanation, and chat with an
-  **AI tutor** grounded in the class material.
+  **AI tutor** grounded in the teacher's material.
+- **Parent** — see your child's progress in plain language: overall average, trend
+  over time, strength by subject, and a one-click **printable progress report**.
+- **Admin** — a school analytics dashboard (mastery bands, at-risk early-warning) and
+  the automation controls.
 
-### The confidence gate (the heart of the ingest side)
+### The confidence gate (now on the AI's generated questions)
 
 ```
-upload → read (per-field confidence) → classify (jev/TypeAI) → grade → GATE → decide
-                                                                          │
-                        every field cleared the threshold ──────────────►  graded
-                        any field below threshold ─────────────────────►  needs_review → teacher
+material → read → generate exam (per-question confidence) → GATE → decide
+                                                              │
+              every question cleared the threshold ─────────►  draft (ready to publish)
+              any question below threshold ────────────────►  needs_review → teacher approves
 ```
 
-A homework auto-grades only when every field cleared the confidence threshold.
-Otherwise a review task names the exact question and reason. This is the same
-human-in-the-loop pattern real document-ingestion systems use — here applied to
-homework so teachers stay in control of a child's grade.
+An exam is published only after the teacher approves it. Questions the model was least
+confident about are flagged for review. This is the same human-in-the-loop pattern real
+document-ingestion systems use — here the human signs off on AI-authored assessments
+before students see them.
 
 ---
 
@@ -114,12 +116,12 @@ homework so teachers stay in control of a child's grade.
 | **Backend** | **Go + Fiber v2**, **pgx** with plain SQL (**no ORM**), `golang-jwt`, embedded SQL migrations |
 | **Frontend** | **Vite + React + TypeScript + Tailwind** (SPA), Recharts, react-dropzone, react-markdown + KaTeX; **responsive down to phone width** and an installable **PWA** (offline app shell via a service worker) |
 | **Database** | **PostgreSQL** (self-hosted; Supabase-compatible — Supabase *is* managed Postgres) |
-| **AI** | Mock by default (free). **GLM** for the tutor + a **vision reader** that reads the homework photo; **`jev` (TypeAI)** for classification. All OpenAI-compatible and swappable |
-| **Automation** | Async ingest pipeline (upload → gate, hands-off) + a **background scheduler** that auto-generates each student's weekly report and recap-video data |
+| **AI** | Mock by default (free). **GLM** authors the exam + teaching notes + tutor replies, and a **vision reader** transcribes the uploaded material; **DeepSeek / `jev` (TypeAI) / OpenAI** drop in (all OpenAI-compatible) |
+| **Automation** | Async coursework pipeline (material → exam, hands-off) + a **background scheduler** that auto-generates each student's weekly report and recap-video data |
 | **Deploy** | Docker Compose · single-server friendly |
 
 Clean architecture (`router → handler → usecase → pgx store`), so business logic
-(grading, explanations, practice generation) is isolated from HTTP and SQL.
+(exam generation, grading, explanations) is isolated from HTTP and SQL.
 
 ---
 
@@ -131,7 +133,7 @@ Prerequisites: **Docker**. (For local dev without Docker: Go 1.24+, Node 22+.)
 # 1. Start Postgres + backend + frontend
 docker compose -f docker/docker-compose.yml --profile full up -d --build
 
-# 2. Seed the demo dataset (one school, 4 logins, 2 subjects, question bank)
+# 2. Seed the demo dataset (one school, 4 logins, 2 subjects, bank, published exams, attempts)
 docker compose -f docker/docker-compose.yml --profile tools run --rm seed
 
 # 3. Open the app
@@ -143,9 +145,10 @@ docker compose -f docker/docker-compose.yml --profile tools run --rm seed
 
 | Role | Email | What to try |
 |---|---|---|
-| 🧑‍🏫 Teacher | `teacher@demo.id` | Upload a homework named `*math*` or `*science*`, watch it grade + gate, work the review queue |
+| 🧑‍🏫 Teacher | `teacher@demo.id` | **Materials** → upload a `.txt`/`.md` syllabus → watch it generate an exam → **Exams** → review the flagged question → **Publish** |
+| 🧒 Student | `student@demo.id` | **Start** a published exam → answer → **Show me how** → chat with the tutor |
 | 👪 Parent | `parent@demo.id` | See Aisha's progress → **Progress report** → Save as PDF |
-| 🧒 Student | `student@demo.id` | Generate practice → **Show me how** → chat with the tutor |
+| 🏫 Admin | `admin@demo.id` | **Overview** (mastery bands, at-risk) → **Automation** (live feed, Run now) |
 
 ### Local dev (no Docker for the apps)
 
@@ -171,22 +174,17 @@ spend — so the hosted demo is free and reproducible. Flip to a real provider w
 env vars (all OpenAI-compatible):
 
 ```bash
-# Tutor + explanations — GLM via the Z.AI coding plan (OpenAI-compatible)
+# Exam + teaching notes + tutor — GLM via the Z.AI coding plan (OpenAI-compatible)
 AI_PROVIDER=glm
 AI_API_KEY=<your Z.AI coding-plan key>
 AI_BASE_URL=https://api.z.ai/api/coding/paas/v4
-AI_MODEL=glm-5.3                    # glm-5.3-flash / glm-4.6 also work
-# (DeepSeek / OpenAI work too — same shape, just swap base URL + model.)
+AI_MODEL=glm-5.3                    # glm-4.6 also works
+# (DeepSeek / TypeAI (jev) / OpenAI work too — same shape, just swap base URL + model.)
 
-# Read the actual homework photo — GLM-5.3-flash (verified). Falls back to mock
-# for PDFs and on error. Key/base URL reuse AI_* (same Z.AI key) by default.
+# Read the uploaded material — GLM-5.3-flash transcribes a PDF/image to text.
+# Falls back to reading text files directly. Key/base URL reuse AI_* by default.
 VISION_PROVIDER=glm
 VISION_MODEL=glm-5.3-flash
-
-# Homework classification via jev (TypeAI)
-CLASSIFIER_PROVIDER=typeai
-CLASSIFIER_API_KEY=...
-CLASSIFIER_MODEL=jev
 
 # Background automation: auto-generate each student's weekly report + recap data.
 SCHEDULER_ENABLED=true
@@ -196,8 +194,7 @@ SCHEDULER_INTERVAL=6h               # also runs once on startup
 The mock and real paths implement the same interfaces, so switching providers is
 a config change, not a rewrite. **For the Docker stack**, copy
 `docker/.env.example` → `docker/.env` (gitignored) with your key and
-`docker compose up` runs on real GLM — including GLM-5.3-flash reading actual
-homework photos.
+`docker compose up` runs on real GLM — reading your material and authoring the exam.
 
 ---
 
@@ -209,17 +206,17 @@ homework-studio/
 │   ├── cmd/api              server entrypoint
 │   ├── cmd/seed             demo seed
 │   └── internal/
-│       ├── pipeline/        read → classify → grade → gate → decide
-│       ├── vision/          GLM vision reader + jev classifier (mock default)
-│       ├── tutor/           explanations, practice generator, RAG chat
+│       ├── coursework/      read material → index (RAG) → notes → generate exam → gate
+│       ├── vision/          ReadText: transcribe a document (GLM vision / text direct)
+│       ├── tutor/           exam generator, teaching notes, explanations, RAG chat
 │       ├── scheduler/       background job: auto weekly reports + recap data
 │       ├── store/           plain-SQL data access
 │       ├── handler/ router/ HTTP
 │       └── db/migrations/   embedded SQL schema
 ├── frontend/                Vite + React + TS + Tailwind SPA
-│   └── src/pages/{teacher,parent,student}
+│   └── src/pages/{teacher,parent,student,admin}
 ├── docker/                  compose (postgres + backend + frontend)
-└── docs/                    case study, screenshots
+└── docs/                    technical overview, manual, case study
 ```
 
 ---
@@ -230,10 +227,9 @@ homework-studio/
 cd backend && go build ./... && go vet ./...     # compiles clean
 ```
 
-The end-to-end flow is exercised by `docs/smoke-test` steps: teacher uploads →
-gate opens a review task → resolve → graded; student generates + grades a
-practice set + gets an explanation; parent sees progress and is blocked (403)
-from another child.
+The end-to-end flow: teacher uploads material → the AI generates an exam and flags a
+low-confidence question → teacher reviews and publishes → a student takes the exam and
+is auto-graded → a parent sees the progress → the admin watches the scheduler.
 
 ---
 

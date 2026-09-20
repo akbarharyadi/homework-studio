@@ -1,6 +1,6 @@
 # Homework Studio — Technical Overview
 
-**A self-hosted EdTech platform: homework in → read, graded, confidence-gated, and turned into a warm progress report, plus an AI tutor.**
+**A self-hosted EdTech platform: teaching material in → AI-generated, teacher-approved exams out, plus auto-graded attempts, warm progress reports, and an AI tutor.**
 
 > Independent portfolio demo. Not affiliated with any company. All data is synthetic.
 > This document explains the architecture, the end-to-end data flow, the database
@@ -15,14 +15,15 @@ roles and one pipeline:
 
 | Role | What they do |
 |---|---|
-| 🧑‍🏫 **Teacher** | Upload a child's homework (PDF/photo). It is read question-by-question with a **confidence per answer**, auto-graded, and anything the reader wasn't sure about opens a **review task** instead of silently grading. |
+| 🧑‍🏫 **Teacher** | Upload **teaching material** (PDF/image/text). The AI reads it and generates a **custom exam**, **teaching notes**, and **tutor knowledge**. Low-confidence questions open a **review** step so the teacher approves them before publishing. |
+| 🧒 **Student** | Take a **published exam**, get instant auto-graded scoring, tap **"Show me how"** for a step-by-step (LaTeX) explanation, and chat with an **AI tutor** grounded in the teacher's material. |
 | 👪 **Parent** | See the child's progress in plain language — average, trend, strength by subject — and open a **printable progress report**. |
-| 🧒 **Student** | Generate a **practice set**, get instant scoring, tap **"Show me how"** for a step-by-step (LaTeX) explanation, and chat with an **AI tutor** grounded in the class material. |
 | 🏫 **Admin** | A school **analytics dashboard** (mastery bands, at-risk early-warning, roster) and the **automation controls** (a live activity feed of what the background jobs did). |
 
-The product's spine is a **document-ingestion pipeline with a human-in-the-loop
-confidence gate** — the same pattern real document-processing systems use, applied
-here to a child's homework so a teacher stays in control of the grade.
+The product's spine is a **document-ingestion → generation pipeline with a
+human-in-the-loop confidence gate** — the teacher's material is read and turned into
+an assessment, and the AI's least-confident questions wait for the teacher's approval
+before students ever see them.
 
 ---
 
@@ -47,24 +48,21 @@ flowchart LR
     end
 
     subgraph Data["PostgreSQL (pgvector image)"]
-        PG[("16 tables<br/>ULID PKs · tenant-scoped")]
+        PG[("tenant-scoped tables<br/>ULID PKs · plain SQL")]
     end
 
     subgraph AI["AI providers (OpenAI-compatible, optional)"]
-        VIS["Vision reader — GLM-5.3-flash"]
-        TUT["Tutor / practice — GLM / DeepSeek"]
-        CLS["Classifier — jev (TypeAI)"]
+        VIS["Material reader — GLM-5.3-flash"]
+        TUT["Exam / notes / tutor — GLM / DeepSeek"]
         MOCK["Deterministic mock (default, no key)"]
     end
 
     UI -->|HTTPS JSON| STATIC
     UI -->|/api/v1/*| PROXY --> RT --> HD --> UC --> ST --> PG
-    UC -.->|reads homework image| VIS
-    UC -.->|explain / generate / chat| TUT
-    UC -.->|subject + worksheet type| CLS
+    UC -.->|transcribe material| VIS
+    UC -.->|generate / explain / chat| TUT
     VIS -. fallback .-> MOCK
     TUT -. fallback .-> MOCK
-    CLS -. fallback .-> MOCK
 ```
 
 **One request path, one data store, swappable AI.** The SPA talks only to the Go
@@ -104,7 +102,7 @@ flowchart TD
     U["use cases — pipeline/ · tutor/ · scheduler/"]
     S["store/   — plain-SQL data access (pgx)"]
     D[("db/ — Postgres")]
-    V["vision/  — Extractor + Classifier interfaces"]
+    V["vision/  — ReadText: transcribe a document"]
     A["ai/      — OpenAI-compatible client"]
 
     R --> H --> U --> S --> D
@@ -119,101 +117,98 @@ flowchart TD
 ```
 backend/
 ├── cmd/
-│   ├── api/        server entrypoint (wires config → store → pipeline/tutor/scheduler → router)
-│   └── seed/       one-shot demo seed (1 school, 4 logins, 2 subjects, question bank)
+│   ├── api/        server entrypoint (wires config → store → coursework/tutor/scheduler → router)
+│   └── seed/       one-shot demo seed (1 school, 4 logins, 2 subjects, bank, exams, attempts)
 └── internal/
     ├── config/     env loading + provider switches
     ├── db/         connection pool + embedded migrations (applied at startup)
-    ├── domain/     entities + enums (Homework, ReviewTask, Question, …) + ULID mint
+    ├── domain/     entities + enums (Material, Exam, Question, …) + ULID mint
     ├── auth/       JWT issue/verify, bcrypt
     ├── middleware/ RequireAuth, RequireRole
-    ├── store/      plain-SQL access — one file per aggregate (homework, tutor, admin, …)
-    ├── vision/     Extractor (read the image) + Classifier (jev) interfaces + mock + LLM impls
-    ├── ai/         tiny OpenAI-compatible chat client (GLM/DeepSeek/TypeAI/OpenAI)
-    ├── pipeline/   read → classify → grade → gate → decide
-    ├── tutor/      explanations, practice generator + grading, RAG chat
+    ├── store/      plain-SQL access — one file per aggregate (material, exams, tutor, admin, …)
+    ├── vision/     ReadText: transcribe a document (image/PDF via the vision model, text direct)
+    ├── ai/         tiny OpenAI-compatible chat client (GLM/DeepSeek/TypeAI/OpenAI) + ChatVision
+    ├── coursework/ read material → index (RAG) → teaching notes → generate exam → gate
+    ├── tutor/      exam generator, teaching notes, explanations + grading, RAG chat
     ├── scheduler/  background job: weekly reports + recap data + auto-flagging
     ├── handler/    HTTP handlers
     └── router/     route table
 ```
 
 **Dependency rule:** handlers depend on use cases; use cases depend on the store
-and on the `vision.Extractor` / `ai.Client` *interfaces* — never on a concrete
-provider. Swapping GLM for DeepSeek, or a real reader for the mock, is a
-constructor argument, not a code change.
+and on the `ai.Client` *interface* — never on a concrete provider. Swapping GLM for
+DeepSeek, or a real model for the mock, is a constructor argument (or an env flag),
+not a code change.
 
 ---
 
-## 5. The ingest pipeline — end to end
+## 5. The coursework pipeline — material → exam
 
-The heart of the ingest side. A teacher uploads a file; the handler stores it,
-creates a `pending` homework, and kicks the pipeline off **asynchronously** (in a
-goroutine) so the HTTP request returns immediately. The frontend then polls status.
+The heart of the ingest → generation side. A teacher uploads teaching material; the
+handler stores the file, creates a `processing` material, and kicks the pipeline off
+**asynchronously** (in a goroutine) so the request returns immediately. The frontend
+polls status.
 
 ```mermaid
 flowchart TD
-    UP["POST /homeworks<br/>(file + student_id + title)"] --> SAVE["Store file to disk<br/>create homework = pending"]
-    SAVE --> RESP["202-style response: {id}"]
-    SAVE --> GO["goroutine: pipeline.Run"]
+    UP["POST /materials<br/>(file + subject_id + title)"] --> SAVE["Store file to disk<br/>create material = processing"]
+    SAVE --> RESP["response: {id}"]
+    SAVE --> GO["goroutine: coursework.Run"]
 
     GO --> P1["status → processing"]
-    P1 --> P2["Read file bytes"]
-    P2 --> P3["Extractor.Extract<br/>(GLM vision / mock)<br/>→ items + per-answer confidence"]
-    P3 --> P4["Classifier.Classify (jev)<br/>→ detected subject"]
-    P4 --> P5["Grade each item<br/>normalize(student) == normalize(key)"]
-    P5 --> GATE{"every answer's<br/>confidence ≥ threshold?<br/>(default 0.80)"}
-    GATE -->|yes| G1["status → graded"]
-    GATE -->|no| G2["status → needs_review<br/>open a review task per low-confidence answer"]
-    G1 --> SAVEX["SaveExtraction:<br/>persist homework + items (+ tasks)"]
-    G2 --> SAVEX
+    P1 --> P2["ReadText: transcribe the material<br/>(image/PDF via vision model · text direct)"]
+    P2 --> P3["Chunk + index → material_chunks<br/>(tutor knowledge / RAG)"]
+    P3 --> P4["GenerateNotes → teaching summary"]
+    P4 --> P5["GenerateExam → MCQs grounded in the material<br/>each with a self-reported confidence"]
+    P5 --> GATE{"per question:<br/>confidence ≥ 0.80<br/>and answer ∈ options?"}
+    GATE -->|yes| G1["question ok"]
+    GATE -->|no| G2["question needs_review (flagged)"]
+    G1 --> EX["create exam + questions<br/>status = draft / needs_review"]
+    G2 --> EX
+    EX --> RDY["material status → ready"]
 
-    RESP -.->|poll| STPOLL["GET /homeworks/:id/status"]
-    STPOLL -.-> SAVEX
+    RESP -.->|poll| STPOLL["GET /materials/:id/status"]
+    STPOLL -.-> RDY
 ```
 
-**The confidence gate** is the key idea:
+**The confidence gate** — now on the *generated* questions:
 
 ```
-read (per-answer confidence) → grade → GATE → decide
-                                         │
-        every answer ≥ threshold ───────►  graded
-        any answer  < threshold ───────►  needs_review → teacher review task
+generate questions (per-question confidence) → GATE → decide
+                                                 │
+        every question ≥ threshold ────────────►  draft (ready to publish)
+        any question  < threshold ────────────►  needs_review → teacher approves
 ```
 
-A homework auto-grades **only when every answer cleared the threshold**. Otherwise
-a review task names the exact question and reason (`"low read confidence (62%) —
-please confirm"`). When the teacher resolves it, the homework **re-grades itself**.
-This is human-in-the-loop by construction: the model never silently decides a
-child's grade off a shaky read.
+An exam is **published only after the teacher approves it**. Questions the model was
+least sure about are **flagged**; the teacher reviews them (keep, or discard), then
+publishes. This is human-in-the-loop by construction: the AI never puts a question in
+front of students that the teacher hasn't signed off on.
 
-### Sequence: upload → gate → review → re-grade
+### Sequence: upload → generate → review → publish → take
 
 ```mermaid
 sequenceDiagram
     participant T as Teacher (SPA)
     participant A as Fiber API
-    participant P as Pipeline (goroutine)
-    participant X as Extractor (GLM/mock)
+    participant P as coursework (goroutine)
+    participant AI as GLM (vision + chat)
     participant DB as Postgres
+    participant S as Student
 
-    T->>A: POST /homeworks (file, student)
-    A->>DB: insert homework (pending)
+    T->>A: POST /materials (file, subject)
+    A->>DB: insert material (processing)
     A-->>T: { id }
-    A->>P: go Run(homework)
-    P->>DB: status = processing
-    P->>X: Extract(image) → items + confidence
-    X-->>P: questions, answers, confidences
-    P->>P: classify + grade + gate
-    alt any answer below threshold
-        P->>DB: status = needs_review + review task(s)
-    else all confident
-        P->>DB: status = graded
-    end
-    loop poll ~every 0.5s
-        T->>A: GET /homeworks/:id/status
-        A-->>T: status
-    end
-    Note over T,DB: If needs_review → teacher confirms the answer →<br/>POST /review/tasks/:id/resolve → homework re-grades
+    A->>P: go Run(material)
+    P->>AI: ReadText(file) → material text
+    P->>DB: chunk + index (RAG)
+    P->>AI: GenerateNotes + GenerateExam → questions + confidence
+    P->>DB: create exam + questions (flag low-confidence)
+    P->>DB: material = ready, exam = draft/needs_review
+    T->>A: review exam, POST /exams/:id/publish
+    A->>DB: approve questions, exam = published
+    S->>A: POST /exams/:id/start → snapshot attempt
+    S->>A: POST /practice/:id/submit → auto-graded %
 ```
 
 ---
@@ -222,29 +217,27 @@ sequenceDiagram
 
 Plain Postgres, **ULID string PKs generated in Go**, every business table scoped by
 `tenant_id` for multi-school isolation. Schema is applied at startup from embedded
-SQL (`internal/db/migrations/0001_init.sql`, `0002_reports.sql`,
-`0003_automation_events.sql`).
+SQL (`0001_init.sql` … `0004_coursework.sql`).
 
 ```mermaid
 erDiagram
     tenants ||--o{ users : has
     tenants ||--o{ subjects : has
     tenants ||--o{ students : has
-    tenants ||--o{ homeworks : has
-    tenants ||--o{ questions : has
+    tenants ||--o{ materials : has
+    tenants ||--o{ exams : has
     users ||--o{ students : "parent_of (SET NULL)"
-    subjects ||--o{ homeworks : "detected in"
-    subjects ||--o{ questions : has
     subjects ||--o{ materials : has
-    students ||--o{ homeworks : owns
-    students ||--|| student_reports : "latest weekly"
-    students ||--o{ practice_sets : takes
-    students ||--o{ chat_sessions : opens
-    homeworks ||--o{ homework_items : "read into"
-    homeworks ||--o{ review_tasks : "may open"
-    homework_items ||--o{ review_tasks : "flagged as"
-    practice_sets ||--o{ practice_answers : records
+    subjects ||--o{ exams : has
+    subjects ||--o{ questions : has
+    materials ||--o{ exams : generates
     materials ||--o{ material_chunks : "chunked for RAG"
+    exams ||--o{ questions : contains
+    exams ||--o{ practice_sets : "taken as"
+    students ||--o{ practice_sets : takes
+    students ||--|| student_reports : "latest weekly"
+    students ||--o{ chat_sessions : opens
+    practice_sets ||--o{ practice_answers : records
     chat_sessions ||--o{ chat_messages : contains
     tenants ||--o{ automation_events : logs
 
@@ -268,45 +261,39 @@ erDiagram
         varchar grade_level
         varchar parent_user_id FK
     }
-    homeworks {
+    materials {
         varchar id PK
-        varchar student_id FK
         varchar subject_id FK
-        varchar status "pending→processing→graded/needs_review/failed"
-        float percent
-        float confidence "min across answers"
+        varchar status "processing|ready|failed"
+        varchar storage_key
+        text summary "AI teaching notes"
     }
-    homework_items {
+    exams {
         varchar id PK
-        varchar homework_id FK
-        int question_no
-        text student_answer
-        text correct_answer
-        bool is_correct
-        float confidence
-        bool needs_review
-    }
-    review_tasks {
-        varchar id PK
-        varchar homework_id FK
-        varchar item_id FK
-        varchar status "open|resolved"
-        varchar reason
+        varchar subject_id FK
+        varchar material_id FK
+        varchar status "draft|needs_review|published"
+        int question_count
+        timestamptz published_at
     }
     questions {
         varchar id PK
         varchar subject_id FK
-        varchar difficulty "easy|medium|hard"
+        varchar exam_id FK "null for bank"
         text stem
         jsonb options
         varchar answer
-        bool ai_generated
+        float confidence
+        bool needs_review
+        bool approved
     }
     practice_sets {
         varchar id PK
         varchar student_id FK
+        varchar exam_id FK
         jsonb snapshot "frozen questions"
         float percent
+        varchar status "open|finished"
     }
     material_chunks {
         varchar id PK
@@ -330,12 +317,18 @@ erDiagram
 
 **Notes on the design**
 
-- **`homeworks.confidence`** stores the *minimum* answer confidence — the number the
-  gate decides on. **`homework_items.needs_review`** marks the specific answers that
-  tripped it, and each opens a `review_tasks` row linked to its item.
-- **`practice_sets.snapshot`** freezes the exact questions (JSONB) at generation
-  time, so a set grades against what the student actually saw even if the bank
-  changes — a resumable, tamper-resistant attempt (adapted from an exam engine).
+- **`questions.confidence` + `needs_review` + `approved`** are the gate: a generated
+  question below the threshold (or whose answer isn't among its options) is flagged
+  and un-approved until the teacher publishes. Bank questions keep the defaults
+  (confidence 1, approved) and carry a null `exam_id`.
+- **`exams`** groups generated questions; `status` walks `draft`/`needs_review` →
+  `published`. A student attempt is a `practice_sets` row linked by `exam_id`.
+- **`practice_sets.snapshot`** freezes the exact questions (JSONB) when the attempt
+  starts, so it grades against what the student saw — a resumable, tamper-resistant
+  attempt. Finished attempts (`status='finished'`, `percent`) are the single source
+  for all progress/dashboard/admin analytics.
+- Student **progress, class stats, and the admin roster all derive from finished
+  `practice_sets`** — there is no separate results table.
 - **`material_chunks.embedding`** is JSONB today (cosine similarity in Go). The
   Postgres image already ships **pgvector**, so this becomes a real `vector` column
   + ANN index with no database migration.
@@ -355,14 +348,14 @@ mock, so the demo is free and reproducible.
 ```mermaid
 flowchart LR
     subgraph Callers
-        PIPE["pipeline: read homework"]
-        TUTX["tutor: explain / generate / chat"]
+        PIPE["coursework: read material"]
+        TUTX["tutor: notes / exam / explain / chat"]
     end
     CLI["ai.Client<br/>POST {baseURL}/chat/completions<br/>Bearer key · model"]
     subgraph Providers["Same shape — change base URL / key / model"]
         GLM["Zhipu GLM<br/>api.z.ai/…/coding/paas/v4"]
         DS["DeepSeek"]
-        TY["TypeAI (jev) — classifier"]
+        TY["TypeAI (jev)"]
         OA["OpenAI"]
     end
     MOCK["Deterministic mock<br/>(no key → free)"]
@@ -375,12 +368,12 @@ flowchart LR
 
 | Touchpoint | Env | Real provider | Fallback |
 |---|---|---|---|
-| **Homework reader (vision)** | `VISION_PROVIDER=glm`, `VISION_MODEL=glm-5.3-flash` | GLM reads the photo/PDF, extracts each question + handwritten answer with confidence. PDFs are rasterized with poppler `pdftoppm` first. | Mock reader (deterministic items). |
-| **Tutor + explanations** | `AI_PROVIDER=glm`, `AI_MODEL=glm-5.3`, `AI_BASE_URL=…/coding/paas/v4` | GLM authors LaTeX step-by-steps, writes fresh practice questions, answers RAG chat. | Mock explanation / bank sampling / canned chat. |
-| **Classifier** | `CLASSIFIER_PROVIDER=typeai`, `CLASSIFIER_MODEL=jev` | jev identifies subject / worksheet type. | Keyword match on filename + questions. |
+| **Material reader (vision)** | `VISION_PROVIDER=glm`, `VISION_MODEL=glm-5.3-flash` | GLM transcribes the uploaded PDF/image to text (PDFs rasterized with poppler `pdftoppm` first). | Text files read directly; a labelled placeholder otherwise. |
+| **Exam + notes + tutor** | `AI_PROVIDER=glm`, `AI_MODEL=glm-5.3`, `AI_BASE_URL=…/coding/paas/v4` | GLM authors exam questions (with confidence) grounded in the material, writes teaching notes + LaTeX explanations, and answers RAG chat. | Bank-sampled exam / excerpt notes / mock explanation / canned chat. |
 
-The **confidence threshold** that drives the gate is `REVIEW_CONFIDENCE_THRESHOLD`
-(default `0.80`), with an optional per-tenant override column.
+The client is OpenAI-compatible, so **DeepSeek, TypeAI (`jev`), or OpenAI** drop in by
+changing base URL + key + model. The **confidence threshold** for flagging a generated
+question is `0.80` (a question is also flagged if its answer isn't among its options).
 
 ---
 
@@ -388,7 +381,8 @@ The **confidence threshold** that drives the gate is `REVIEW_CONFIDENCE_THRESHOL
 
 Two things run without anyone pressing a button:
 
-1. **The ingest pipeline** (§5) — every upload reads, grades, and gates itself.
+1. **The coursework pipeline** (§5) — every material read, indexed, and turned into a
+   gated exam on upload.
 2. **A background scheduler** — runs once on startup and then every
    `SCHEDULER_INTERVAL` (default `6h`).
 
@@ -429,17 +423,18 @@ All under `/api/v1`. Auth is a Bearer JWT; roles are enforced by middleware.
 | `GET` | `/students` | any | Students (scoped) |
 | `GET` | `/students/:id/progress` | any | Average, timeline, subject strengths |
 | `GET` | `/reports/student/:id` | any | Latest auto-generated weekly report |
-| `POST` | `/homeworks` | teacher, admin | Upload → kicks off the pipeline |
-| `GET` | `/homeworks` · `/homeworks/:id` · `/:id/status` | any | List / detail / poll status |
-| `GET` | `/review/tasks` | teacher, admin | Open review queue |
-| `POST` | `/review/tasks/:id/resolve` | teacher, admin | Confirm answer → re-grade |
+| `POST` | `/materials` | teacher, admin | Upload material → kicks off the coursework pipeline |
+| `GET` | `/materials` · `/materials/:id` · `/:id/status` | teacher, admin | List / notes / poll status |
+| `GET` | `/exams` · `/exams/:id` | teacher, admin | List generated exams / one with its questions |
+| `POST` | `/exams/:id/publish` | teacher, admin | Approve remaining questions → publish |
+| `POST` | `/exams/:id/questions/:qid/discard` | teacher, admin | Drop a rejected question |
 | `GET` | `/dashboard/class` | teacher, admin | Class stats + distribution |
-| `GET` | `/admin/overview` | admin | School analytics |
-| `GET` | `/admin/automation` | admin | Scheduler status + event feed |
+| `GET` | `/admin/overview` · `/admin/automation` | admin | School analytics / scheduler feed |
 | `POST` | `/admin/automation/run` | admin | Trigger the scheduler now |
+| `GET` | `/exams/published` | any | Published exams a student can take |
+| `POST` | `/exams/:id/start` | any | Snapshot a published exam into an attempt |
+| `POST` | `/practice/:id/submit` | any | Auto-grade an attempt |
 | `GET` | `/questions/:id/explain` | any | Step-by-step explanation |
-| `POST` | `/practice/generate` | any | Make a practice set |
-| `POST` | `/practice/:id/submit` | any | Grade a practice set |
 | `POST` | `/tutor/chat` | any | RAG tutor chat |
 
 **Auth & RBAC.** `RequireAuth` verifies the JWT and loads the user; `RequireRole`
@@ -477,10 +472,8 @@ docker compose -f docker/docker-compose.yml --profile tools run --rm seed
 | Variable | Default | Meaning |
 |---|---|---|
 | `DATABASE_URL` | local Postgres | pgx connection string |
-| `REVIEW_CONFIDENCE_THRESHOLD` | `0.80` | The gate |
-| `AI_PROVIDER` / `AI_MODEL` / `AI_BASE_URL` / `AI_API_KEY` | `mock` | Tutor + practice |
-| `VISION_PROVIDER` / `VISION_MODEL` | `mock` / `glm-5.3-flash` | Homework reader |
-| `CLASSIFIER_PROVIDER` / `CLASSIFIER_MODEL` | `mock` / `jev` | Subject classifier |
+| `AI_PROVIDER` / `AI_MODEL` / `AI_BASE_URL` / `AI_API_KEY` | `mock` | Exam + notes + tutor |
+| `VISION_PROVIDER` / `VISION_MODEL` | `mock` / `glm-5.3-flash` | Material reader (transcription) |
 | `SCHEDULER_ENABLED` / `SCHEDULER_INTERVAL` | `true` / `6h` | Background reports |
 | `ACCESS_TOKEN_TTL_MINUTES` | `720` | JWT lifetime |
 
@@ -491,10 +484,10 @@ docker compose -f docker/docker-compose.yml --profile tools run --rm seed
 - **No ORM.** The read side is analytics (aggregations, distributions). Plain SQL is
   clearer and faster to tune here, and there is no hidden query behavior. The cost —
   writing SQL by hand — is small at this schema size.
-- **Async pipeline, poll for status.** Upload returns immediately and the pipeline
-  runs in a goroutine; the SPA polls `/status`. Simple and dependency-free (no queue
-  broker). For higher volume this is where a real worker/queue would slot in — the
-  pipeline is already a self-contained unit.
+- **Async pipeline, poll for status.** Upload returns immediately and the coursework
+  pipeline runs in a goroutine; the SPA polls `/materials/:id/status`. Simple and
+  dependency-free (no queue broker). For higher volume this is where a real
+  worker/queue slots in — the pipeline is already a self-contained unit.
 - **Mock-by-default AI.** The demo is free and reproducible; every AI path degrades
   gracefully to a deterministic result. Real models are one env flag away.
 - **JSONB embeddings, pgvector image.** Keeps the demo dependency-light while leaving
@@ -512,10 +505,10 @@ cd backend && go build ./... && go vet ./...   # compiles clean
 cd frontend && npm run build                   # tsc --noEmit + vite build
 ```
 
-The end-to-end flow: teacher uploads → the gate opens a review task for the
-low-confidence answer → resolve → graded; a student generates and grades a practice
-set and gets an explanation; a parent sees progress and is blocked (403) from another
-child; the admin watches the scheduler log reports and at-risk flags.
+The end-to-end flow: teacher uploads material → the AI generates an exam and flags a
+low-confidence question → teacher reviews and publishes → a student takes the exam,
+is auto-graded, and gets an explanation → a parent sees the progress → the admin
+watches the scheduler log reports and at-risk flags.
 
 ---
 
