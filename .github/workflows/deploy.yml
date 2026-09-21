@@ -4,7 +4,7 @@ name: Deploy
 # runners can't reach, so a *self-hosted* runner on the server picks the job up and
 # deploys locally. Register it once (see docs/DEPLOY.md) with the label `homework`.
 #
-# The GLM key lives in an Actions secret (GLM_API_KEY), never in git — the job writes
+# The AI API key lives in an Actions secret (AI_API_KEY), never in git — the job writes
 # docker/.env from it at deploy time.
 on:
   push:
@@ -34,7 +34,7 @@ jobs:
         run: |
           cat > docker/.env <<EOF
           AI_PROVIDER=glm
-          AI_API_KEY=${{ secrets.GLM_API_KEY }}
+          AI_API_KEY=${{ secrets.AI_API_KEY }}
           AI_BASE_URL=https://api.z.ai/api/coding/paas/v4
           AI_MODEL=glm-5.3
           VISION_PROVIDER=glm

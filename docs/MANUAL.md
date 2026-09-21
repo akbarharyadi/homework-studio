@@ -236,7 +236,7 @@ its trigger, schedule and how many times it has fired:
 - **Auto-remediation** — each flagged student gets a targeted practice set in their
   weakest subject, which they see as "Recommended for you" (every 6h).
 
-It also shows the **GLM models** doing the work and a colour-coded **live activity
+It also shows the **AI models** doing the work and a colour-coded **live activity
 feed** of what just happened. Press **▶ Run scheduled jobs now** to trigger a run.
 
 ![Admin — automation](manual/img/14-admin-automation.png)

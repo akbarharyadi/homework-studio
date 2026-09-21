@@ -5,7 +5,7 @@ name: Docs auto-update
 # drift. Any change is committed straight back to the branch.
 #
 # Runs on GitHub-hosted runners (Docker + Chromium are available). It seeds the demo
-# dataset, so it needs no GLM key — every screenshot comes from seeded data.
+# dataset, so it needs no AI key — every screenshot comes from seeded data.
 on:
   push:
     branches: [main, master]

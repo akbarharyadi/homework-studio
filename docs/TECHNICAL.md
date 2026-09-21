@@ -52,8 +52,8 @@ flowchart LR
     end
 
     subgraph AI["AI providers (OpenAI-compatible)"]
-        VIS["Material reader — GLM-5.3-flash"]
-        TUT["Exam / notes / tutor — GLM / DeepSeek"]
+        VIS["Material reader — vision model"]
+        TUT["Exam / notes / tutor — language model"]
     end
 
     UI -->|HTTPS JSON| STATIC
@@ -64,7 +64,7 @@ flowchart LR
 
 **One request path, one data store, swappable AI.** The SPA talks only to the Go
 JSON API. Every AI touchpoint goes through one OpenAI-compatible client, so the whole
-system runs on **GLM** and swaps to DeepSeek / OpenAI with an env change. A key is
+system runs on any OpenAI-compatible provider, swapped with an env change. A key is
 required; without one, generation degrades gracefully rather than fabricating output.
 
 ---
@@ -83,7 +83,7 @@ required; without one, generation degrades gracefully rather than fabricating ou
 | **Frontend** | **Vite + React 18 + TypeScript + Tailwind** | Fast dev server + tiny production bundle. A plain SPA (no SSR) because this is an authenticated app, not a content site. **The same React/Tailwind components move to Next.js unchanged** if that stack is preferred. |
 | **Charts / UX** | Recharts · react-dropzone · react-markdown + KaTeX | Recharts for the score distributions and trends; react-dropzone for the upload; react-markdown + KaTeX to render the tutor's LaTeX explanations. |
 | **PWA** | **vite-plugin-pwa** (Workbox) | Installable app + offline app shell via an auto-updating service worker. |
-| **AI client** | One **OpenAI-compatible** client | GLM, DeepSeek and OpenAI all speak the same `/chat/completions` shape — only base URL / key / model change. No per-vendor SDKs. |
+| **AI client** | One **OpenAI-compatible** client | Every major provider speaks the same `/chat/completions` shape — only base URL / key / model change. No per-vendor SDKs. |
 | **Deploy** | **Docker Compose** + GitHub Actions | `postgres + backend + frontend` on one host behind nginx; pull-based CD to the server via a self-hosted runner, public HTTPS via a Cloudflare Tunnel (§10, [DEPLOY.md](DEPLOY.md)). |
 
 ---
@@ -125,7 +125,7 @@ backend/
     ├── middleware/ RequireAuth, RequireRole
     ├── store/      plain-SQL access — one file per aggregate (material, exams, tutor, admin, …)
     ├── vision/     ReadText: transcribe a document (image/PDF via the vision model, text direct)
-    ├── ai/         tiny OpenAI-compatible chat client (GLM/DeepSeek/OpenAI) + ChatVision
+    ├── ai/         tiny OpenAI-compatible chat client (any OpenAI-compatible provider) + ChatVision
     ├── coursework/ read material → index (RAG) → teaching notes → generate exam → gate → auto-publish
     ├── tutor/      exam generator, teaching notes, explanations + grading, RAG chat
     ├── scheduler/  background job: weekly reports + recap data + at-risk flagging + remediation
@@ -134,8 +134,8 @@ backend/
 ```
 
 **Dependency rule:** handlers depend on use cases; use cases depend on the store
-and on the `ai.Client` — never on a concrete provider. Swapping GLM for DeepSeek or
-OpenAI is a base-URL/model change (an env flag), not a code change.
+and on the `ai.Client` — never on a concrete provider. Swapping one provider for
+another is a base-URL/model change (an env flag), not a code change.
 
 ---
 
@@ -189,7 +189,7 @@ sequenceDiagram
     participant T as Teacher (SPA)
     participant A as Fiber API
     participant P as coursework (goroutine)
-    participant AI as GLM (vision + chat)
+    participant AI as AI model (vision + chat)
     participant DB as Postgres
     participant S as Student
 
@@ -344,8 +344,8 @@ erDiagram
 
 ## 7. AI architecture — one client, swappable providers
 
-Everything AI goes through one **OpenAI-compatible** client. It runs on **GLM** (the
-Z.AI coding plan); `Enabled()` is true when a key and base URL are set. A key is
+Everything AI goes through one **OpenAI-compatible** client, so any such provider
+works; `Enabled()` is true when a key and base URL are set. A key is
 required — there is no mock provider. If the model is unreachable, callers degrade
 honestly (reveal the stored answer / return the retrieved material) rather than
 fabricate output.
@@ -358,22 +358,20 @@ flowchart LR
     end
     CLI["ai.Client<br/>POST {baseURL}/chat/completions<br/>Bearer key · model"]
     subgraph Providers["Same shape — change base URL / key / model"]
-        GLM["Zhipu GLM<br/>api.z.ai/…/coding/paas/v4"]
-        DS["DeepSeek"]
-        OA["OpenAI"]
+        ANY["Any OpenAI-compatible provider<br/>(text + vision models)"]
     end
 
     PIPE --> CLI
     TUTX --> CLI
-    CLI -->|Bearer key| GLM & DS & OA
+    CLI -->|Bearer key| ANY
 ```
 
-| Touchpoint | Env | What GLM does | If unreachable |
+| Touchpoint | Env | What the model does | If unreachable |
 |---|---|---|---|
-| **Material reader (vision)** | `VISION_PROVIDER=glm`, `VISION_MODEL=glm-5.3-flash` | Transcribes the uploaded PDF/image to text (PDFs rasterized with poppler `pdftoppm` first). | Text files read directly; a labelled placeholder otherwise. |
-| **Exam + notes + tutor** | `AI_PROVIDER=glm`, `AI_MODEL=glm-5.3`, `AI_BASE_URL=…/coding/paas/v4` | Authors exam questions (with confidence) grounded in the material, writes teaching notes + LaTeX explanations, and answers RAG chat. | Bank-sampled exam / excerpt notes / stored explanation / a short nudge. |
+| **Material reader (vision)** | `VISION_PROVIDER`, `VISION_MODEL` (a vision-capable model) | Transcribes the uploaded PDF/image to text (PDFs rasterized with poppler `pdftoppm` first). | Text files read directly; a labelled placeholder otherwise. |
+| **Exam + notes + tutor** | `AI_PROVIDER`, `AI_MODEL`, `AI_BASE_URL` | Authors exam questions (with confidence) grounded in the material, writes teaching notes + LaTeX explanations, and answers RAG chat. | Bank-sampled exam / excerpt notes / stored explanation / a short nudge. |
 
-The client is OpenAI-compatible, so **DeepSeek or OpenAI** drop in by changing base URL
+The client is OpenAI-compatible, so providers are swapped by changing base URL
 + key + model. The **confidence threshold** for flagging a generated question is `0.80`
 (a question is also flagged if its answer isn't among its options); a clean exam
 (nothing flagged) **auto-publishes**.
@@ -488,7 +486,7 @@ flowchart LR
   and commits any drift back. The docs can't fall behind the app.
 - **Deploy** — pull-based CD. The target server is on a LAN GitHub's cloud can't reach,
   so a **self-hosted runner on the server** picks up the job and runs `docker compose up`.
-  The GLM key comes from an Actions secret, written to `docker/.env` at deploy time —
+  The AI key comes from an Actions secret, written to `docker/.env` at deploy time —
   never committed.
 
 **Public HTTPS with no open ports.** A **Cloudflare Tunnel** (`cloudflared` on the
@@ -504,15 +502,15 @@ docker compose -f docker/docker-compose.yml --profile tools run --rm seed
 # 3. Open  → frontend http://localhost:3000 · API http://localhost:8080/health
 ```
 
-**Config** is environment-first (`internal/config`). The AI runs on GLM: copy
-`docker/.env.example` → `docker/.env` (gitignored) with a GLM key and
+**Config** is environment-first (`internal/config`). Copy
+`docker/.env.example` → `docker/.env` (gitignored) with your provider's API key and
 `docker compose up` runs the full pipeline. A key is required — there is no mock.
 
 | Variable | Default | Meaning |
 |---|---|---|
 | `DATABASE_URL` | local Postgres | pgx connection string |
-| `AI_PROVIDER` / `AI_MODEL` / `AI_BASE_URL` / `AI_API_KEY` | `glm` / `glm-5.3` / Z.AI coding URL / — | Exam + notes + tutor (set the key) |
-| `VISION_PROVIDER` / `VISION_MODEL` | `glm` / `glm-5.3-flash` | Material reader (transcription) |
+| `AI_PROVIDER` / `AI_MODEL` / `AI_BASE_URL` / `AI_API_KEY` | provider / text model / base URL / — | Exam + notes + tutor (set the key) |
+| `VISION_PROVIDER` / `VISION_MODEL` | provider / vision-capable model | Material reader (transcription) |
 | `SCHEDULER_ENABLED` / `SCHEDULER_INTERVAL` | `true` / `6h` | Reports + flagging + remediation |
 | `ACCESS_TOKEN_TTL_MINUTES` | `720` | JWT lifetime |
 
@@ -527,9 +525,9 @@ docker compose -f docker/docker-compose.yml --profile tools run --rm seed
   pipeline runs in a goroutine; the SPA polls `/materials/:id/status`. Simple and
   dependency-free (no queue broker). For higher volume this is where a real
   worker/queue slots in — the pipeline is already a self-contained unit.
-- **One AI client, GLM-only.** Every AI path goes through one OpenAI-compatible client
-  running on GLM; if the model is unreachable it degrades honestly (stored answer /
-  retrieved material) instead of fabricating. Switching provider is one env flag.
+- **One AI client, provider-agnostic.** Every AI path goes through one OpenAI-compatible
+  client; if the model is unreachable it degrades honestly (stored answer / retrieved
+  material) instead of fabricating. Switching provider is one env flag.
 - **JSONB embeddings, pgvector image.** Keeps the demo dependency-light while leaving
   a zero-migration path to a real vector index.
 - **Stateless JWT.** No session store to run; fits a single self-hosted binary.

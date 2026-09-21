@@ -25,7 +25,7 @@ into a small, legible product.
 | **Teacher workflows** | A confidence-gated **review queue**: the teacher confirms only what the model was unsure about; the homework re-grades on resolve |
 | **Parent progress visibility** | A parent view scoped to their own children (RBAC), trend charts, and a **printable progress report** |
 | **Reliable, low-risk grading** | A child's grade is never silently set by a model guess — low confidence always routes to a human |
-| **AI as product leverage** | Exam generator, step-by-step explanations, and a material-grounded tutor — all on GLM, with a clean confidence gate and hands-off automation |
+| **AI as product leverage** | Exam generator, step-by-step explanations, and a material-grounded tutor — all real AI, with a clean confidence gate and hands-off automation |
 | **Self-serve enrollment funnel** | Scoped out next (see below); I've built multi-step enrollment + payment funnels before on real admissions systems |
 
 ## Engineering decisions (and why)
@@ -43,21 +43,21 @@ into a small, legible product.
 - **Confidence gate + review queue.** The single most important product decision:
   automation that knows when to defer to a human. Corrections are applied as a
   first-class action that re-aggregates the score and closes the task.
-- **Real GLM, honest degradation.** The whole product runs on **GLM** (a key is
-  required — there is no mock provider); if the model is unreachable, callers reveal
+- **Real AI, honest degradation.** The whole product runs on a real model (an API key
+  is required — there is no mock provider); if the model is unreachable, callers reveal
   the stored answer or the retrieved material rather than fabricate output.
 
 ## AI tooling
 
 I use AI both as **build-time leverage** and as **runtime providers**:
 
-- **Coding agents** (GLM coding plan, and CLI agents) to move fast in a messy,
+- **Coding agents** (Claude Code and other CLI coding agents) to move fast in a messy,
   real-world codebase — this demo was assembled with that workflow.
-- **Runtime LLMs, OpenAI-compatible and swappable:** **GLM** (my GLM coding plan)
-  authors the exam + teaching notes, answers the tutor's explanations and chat, and
-  **GLM-5.3-flash** transcribes the uploaded material — with **DeepSeek** and
-  **OpenAI** as drop-in alternates. One client shape serves all of them; switching is
-  an `AI_PROVIDER` / base-URL / model change, not a rewrite.
+- **Runtime LLMs, OpenAI-compatible and swappable:** a language model authors the
+  exam + teaching notes and answers the tutor's explanations and chat, and a
+  vision-capable model transcribes the uploaded material — any OpenAI-compatible
+  provider drops in. One client shape serves all of them; switching is an
+  `AI_PROVIDER` / base-URL / model change, not a rewrite.
 
 ## Built by assembling my own prior work
 
@@ -78,11 +78,11 @@ The reuse *is* the point: good judgement about what to build new vs. adapt.
 
 Two things that are genuinely wired, not just scaffolded:
 
-- **Material → exam, on GLM** — the teacher uploads teaching material; **GLM-5.3-flash**
-  transcribes the PDF/image (poppler rasterizes PDFs), **glm-5.3** authors exam
-  questions grounded in it (each with a confidence), and the least-confident ones are
-  flagged for the teacher. A clean exam (nothing flagged) **auto-publishes**. Verified
-  end-to-end: a GLM-generated clean exam published itself with no human action.
+- **Material → exam, on real AI** — the teacher uploads teaching material; a vision
+  model transcribes the PDF/image (poppler rasterizes PDFs), a language model authors
+  exam questions grounded in it (each with a confidence), and the least-confident ones
+  are flagged for the teacher. A clean exam (nothing flagged) **auto-publishes**. Verified
+  end-to-end: an AI-generated clean exam published itself with no human action.
 - **Background scheduler** — on a timer (and on startup) it writes every student's
   weekly report + recap data, **flags** those under 65%, and **builds each of them a
   targeted practice set** in their weakest subject — no one pressing a button. It shows
@@ -95,10 +95,10 @@ Two things that are genuinely wired, not just scaffolded:
    reusing a multi-step funnel + checkout I've built before.
 2. **Close the video loop** — have the scheduler render each recap MP4 (not just its
    data), and deliver the weekly report (e.g. over Telegram via my existing bridge).
-3. **AI-generated practice** — replace the bank-sampling generator with GLM-authored
+3. **AI-generated practice** — replace the bank-sampling generator with AI-authored
    questions (my ai-cbt "quizmaster" pattern).
 
 ## Honesty notes
 
-Synthetic data throughout; real GLM (a key is required); independent demo, not
+Synthetic data throughout; real AI (an API key is required); independent demo, not
 affiliated with any company. Runs end-to-end today: `docker compose up`, seed, sign in.

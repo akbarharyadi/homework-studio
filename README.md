@@ -32,13 +32,13 @@ that kids actually want to chase.
 
 ![Gamified student home](docs/manual/img/07-student-home.png)
 
-### Real GLM — it reads your material and writes the exam
+### Real AI — it reads your material and writes the exam
 
-**GLM-5.3-flash** transcribes the uploaded PDF/image (poppler rasterizes PDFs first)
-and **glm-5.3** authors multiple-choice questions grounded in it, each with a
+A **vision model** transcribes the uploaded PDF/image (poppler rasterizes PDFs first)
+and a **language model** authors multiple-choice questions grounded in it, each with a
 self-reported confidence. Questions below the bar are flagged for the teacher; a clean
-exam (nothing flagged) **publishes itself**. GLM is the real, only AI path — set a key
-(`docker/.env`) and the whole pipeline runs on it.
+exam (nothing flagged) **publishes itself**. The AI is real, not mocked — set an API key
+(`docker/.env`) and the whole pipeline runs on it; any OpenAI-compatible provider works.
 
 ### Admin monitoring & where the automation shows up
 
@@ -49,7 +49,7 @@ An **admin** role gets a real analytics dashboard and the automation controls:
   subject strengths, and the full roster — each with a plain-language explanation.
 - **Automation** — a **jobs dashboard**: every automated job the platform runs
   (material→exam, **auto-publish** clean exams, weekly reports, **at-risk flagging**,
-  **auto-remediation**) with its trigger, schedule and run count, the GLM models doing
+  **auto-remediation**) with its trigger, schedule and run count, the AI models doing
   the work, a **Run now** trigger, and a colour-coded **live activity feed** of what
   the automation just did.
 
@@ -128,7 +128,7 @@ handles the rest.
 | **Backend** | **Go + Fiber v2**, **pgx** with plain SQL (**no ORM**), `golang-jwt`, embedded SQL migrations |
 | **Frontend** | **Vite + React + TypeScript + Tailwind** (SPA), Recharts, react-dropzone, react-markdown + KaTeX; **responsive down to phone width** and an installable **PWA** (offline app shell via a service worker) |
 | **Database** | **PostgreSQL** (self-hosted; Supabase-compatible — Supabase *is* managed Postgres) |
-| **AI** | **GLM** (Z.AI coding plan) authors the exam + teaching notes + tutor replies, and **GLM-5.3-flash** transcribes the uploaded material; **DeepSeek / OpenAI** drop in (all OpenAI-compatible). A key is required — there is no mock path |
+| **AI** | A **language model** authors the exam + teaching notes + tutor replies and a **vision model** transcribes the uploaded material — through one **OpenAI-compatible** client, so any such provider drops in with a base URL + model change. A key is required — there is no mock path |
 | **Automation** | Async coursework pipeline (material → exam → **auto-publish** when clean) + a **background scheduler** that writes weekly reports, **flags at-risk students** and **builds them remediation practice**, all surfaced on an admin **jobs dashboard** |
 | **Deploy** | Docker Compose · pull-based CD to a self-hosted server via a **GitHub Actions self-hosted runner** · public HTTPS through a **Cloudflare Tunnel** — see **[docs/DEPLOY.md](docs/DEPLOY.md)** |
 
@@ -139,7 +139,7 @@ Clean architecture (`router → handler → usecase → pgx store`), so business
 
 ## Quick start
 
-Prerequisites: **Docker** and a **GLM key** (Z.AI coding plan) for the AI features.
+Prerequisites: **Docker** and an **API key** for an OpenAI-compatible AI provider (for the AI features).
 Copy `docker/.env.example` → `docker/.env` (gitignored) and add your `AI_API_KEY`.
 (For local dev without Docker: Go 1.26+, Node 22+.)
 
@@ -183,21 +183,21 @@ cd frontend && npm install && npm run dev   # http://localhost:3000
 
 ## AI configuration
 
-The app runs on **GLM** (the Z.AI coding plan, OpenAI-compatible). A key is
-**required** — there is no mock path. Set it with env vars:
+The app runs on any **OpenAI-compatible** AI provider. An API key is **required** —
+there is no mock path. Set it with env vars:
 
 ```bash
-# Exam + teaching notes + tutor — GLM via the Z.AI coding plan (OpenAI-compatible)
-AI_PROVIDER=glm
-AI_API_KEY=<your Z.AI coding-plan key>
-AI_BASE_URL=https://api.z.ai/api/coding/paas/v4
-AI_MODEL=glm-5.3                    # glm-4.6 also works
-# (DeepSeek / OpenAI work too — same shape, just swap base URL + model.)
+# Exam + teaching notes + tutor — any OpenAI-compatible provider
+AI_PROVIDER=<provider-name>
+AI_API_KEY=<your API key>
+AI_BASE_URL=<the provider's OpenAI-compatible base URL>
+AI_MODEL=<text model>
+# (Same shape for every provider — only base URL + model change.)
 
-# Read the uploaded material — GLM-5.3-flash transcribes a PDF/image to text.
+# Read the uploaded material — a vision-capable model transcribes a PDF/image to text.
 # Text files (.txt/.md/.csv) are read directly. Key/base URL reuse AI_* by default.
-VISION_PROVIDER=glm
-VISION_MODEL=glm-5.3-flash
+VISION_PROVIDER=<provider-name>
+VISION_MODEL=<vision-capable model>
 
 # Background automation: weekly reports, at-risk flagging + remediation practice.
 SCHEDULER_ENABLED=true
@@ -207,7 +207,7 @@ SCHEDULER_INTERVAL=6h               # also runs once on startup
 Providers are swappable (any OpenAI-compatible base URL + model), so changing model is
 a config change, not a rewrite. **For the Docker stack**, copy
 `docker/.env.example` → `docker/.env` (gitignored) with your key and
-`docker compose up` runs on real GLM — reading your material and authoring the exam.
+`docker compose up` runs on the real AI — reading your material and authoring the exam.
 Without a key the app still boots, but generation, the tutor and material reading are
 off.
 
@@ -222,7 +222,7 @@ homework-studio/
 │   ├── cmd/seed             demo seed
 │   └── internal/
 │       ├── coursework/      read material → index (RAG) → notes → generate exam → gate
-│       ├── vision/          ReadText: transcribe a document (GLM vision / text direct)
+│       ├── vision/          ReadText: transcribe a document (vision model / text direct)
 │       ├── tutor/           exam generator, teaching notes, explanations, RAG chat
 │       ├── scheduler/       background job: auto weekly reports + recap data
 │       ├── store/           plain-SQL data access
@@ -258,7 +258,7 @@ git push main
    ├─► Docs auto-update   spins up the real app, seeds it, regenerates the manual
    │                      screenshots + PDFs from it, and commits any drift back
    └─► Deploy             a self-hosted runner ON the server pulls the commit and runs
-                          docker compose up --build (GLM key from an Actions secret)
+                          docker compose up --build (AI key from an Actions secret)
                                │
                                ▼
      homeworkstudio.akbarharyadi.com ◄── Cloudflare Tunnel ◄── frontend :3000 ──/api/──► backend

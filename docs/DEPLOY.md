@@ -20,7 +20,7 @@ The server is on a home LAN that GitHub's cloud runners can't reach, so CD is
 web traffic comes through a **Cloudflare Tunnel** (`cloudflared`), so nothing is
 port-forwarded and no firewall hole is opened.
 
-Secrets never touch git: the GLM key lives in a GitHub Actions secret and is written
+Secrets never touch git: the AI API key lives in a GitHub Actions secret and is written
 to `docker/.env` at deploy time; `docker/.env` and the tunnel credentials stay on the
 server only.
 
@@ -28,16 +28,16 @@ server only.
 
 ## One-time setup
 
-### 1. GitHub secret — the GLM key
+### 1. GitHub secret — the AI API key
 
 In the repo: **Settings → Secrets and variables → Actions → New repository secret**
 
 | Name | Value |
 |---|---|
-| `GLM_API_KEY` | your Z.AI coding-plan key (the one in your local `docker/.env`) |
+| `AI_API_KEY` | your AI provider's API key (the one in your local `docker/.env`) |
 
 (Or from your machine, where `docker/.env` has the key:
-`gh secret set GLM_API_KEY < <(grep '^AI_API_KEY=' docker/.env | cut -d= -f2-)`.)
+`gh secret set AI_API_KEY < <(grep '^AI_API_KEY=' docker/.env | cut -d= -f2-)`.)
 
 ### 2. Server — Docker
 

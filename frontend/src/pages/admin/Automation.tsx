@@ -124,20 +124,20 @@ export function AdminAutomationPage() {
               <div className="rounded-xl bg-paper p-3">
                 <div className="text-xs font-semibold uppercase tracking-wide text-ink-soft">Exams · notes · tutor</div>
                 <div className="mt-1 flex items-center gap-2">
-                  <Badge tone="grow">{a.tutor_provider}</Badge>
-                  <span className="text-sm font-medium text-ink">{a.ai_model}</span>
+                  <Badge tone="grow">AI</Badge>
+                  <span className="text-sm font-medium text-ink">Language model</span>
                 </div>
               </div>
               <div className="rounded-xl bg-paper p-3">
                 <div className="text-xs font-semibold uppercase tracking-wide text-ink-soft">Reads your material</div>
                 <div className="mt-1 flex items-center gap-2">
-                  <Badge tone="grow">{a.vision_reader}</Badge>
-                  <span className="text-sm font-medium text-ink">{a.vision_model}</span>
+                  <Badge tone="grow">AI</Badge>
+                  <span className="text-sm font-medium text-ink">Vision model</span>
                 </div>
               </div>
             </div>
             <p className="mt-3 text-xs text-ink-soft">
-              Powered by GLM (Z.AI coding plan). Any OpenAI-compatible provider drops in via config.
+              Runs on any OpenAI-compatible model — the provider is a config change, not a code change.
             </p>
           </CardBody>
         </Card>
