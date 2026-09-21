@@ -109,14 +109,15 @@ Four roles, one pipeline:
 ```
 material → read → generate exam (per-question confidence) → GATE → decide
                                                               │
-              every question cleared the threshold ─────────►  draft (ready to publish)
-              any question below threshold ────────────────►  needs_review → teacher approves
+              every question cleared the threshold ─────────►  published automatically
+              any question below threshold ────────────────►  needs_review → teacher approves → published
 ```
 
-An exam is published only after the teacher approves it. Questions the model was least
-confident about are flagged for review. This is the same human-in-the-loop pattern real
-document-ingestion systems use — here the human signs off on AI-authored assessments
-before students see them.
+A clean exam publishes itself; one with any flagged question reaches students only after
+the teacher approves it. Questions the model was least confident about are flagged for
+review. This is the same human-in-the-loop pattern real document-ingestion systems use —
+here the human signs off on the AI-authored questions that need it, and the automation
+handles the rest.
 
 ---
 
@@ -247,6 +248,32 @@ is auto-graded → a parent sees the progress → the admin watches the schedule
 
 ---
 
+## Update flow — from a push to the live app
+
+Live demo: **https://homeworkstudio.akbarharyadi.com**
+
+```
+git push main
+   ├─► CI                 build + vet + test (Go) · tsc + build (frontend)
+   ├─► Docs auto-update   spins up the real app, seeds it, regenerates the manual
+   │                      screenshots + PDFs from it, and commits any drift back
+   └─► Deploy             a self-hosted runner ON the server pulls the commit and runs
+                          docker compose up --build (GLM key from an Actions secret)
+                               │
+                               ▼
+     homeworkstudio.akbarharyadi.com ◄── Cloudflare Tunnel ◄── frontend :3000 ──/api/──► backend
+```
+
+- **Nothing is hand-edited after a merge** — the running app, the screenshots and the
+  PDFs all follow the code.
+- **Data survives deploys.** Postgres and uploads live in named Docker volumes; only an
+  explicit **seed** resets them.
+- **Manual deploy / rollback** (on the server, e.g. if the runner is down):
+  `cd ~/homework-studio && git pull && docker compose -f docker/docker-compose.yml --env-file docker/.env --profile full up -d --build`
+- One-time server setup (runner, tunnel, secrets): **[docs/DEPLOY.md](docs/DEPLOY.md)**.
+
+---
+
 ## Documentation
 
 | Doc | What's in it |
@@ -259,6 +286,27 @@ Both the Markdown docs and their PDFs are **generated from source** — screensh
 captured from the running app and the PDFs rendered (Mermaid diagrams and all) with a
 small offline toolchain in [`docs/tooling/`](docs/tooling/). Regenerate with
 `cd docs/tooling && npm install && npm run all`.
+
+---
+
+## Roadmap
+
+Deliberate deferrals: a single binary with in-process jobs is the right size for a demo.
+These are the next steps if it grew into a product.
+
+- [ ] **Modular backend — separate binaries, gRPC.** Split the monolith into one service
+  per domain: `auth`, `teacher`, `student`, `parent`, `admin`, and **`brain`** — a
+  standalone AI gateway that owns every LLM call (exam generation, teaching notes, tutor,
+  vision). One shared Postgres; services talk over **gRPC**. The existing layers
+  (`router → handler → usecase → store`) already map onto service boundaries, so this is a
+  repackaging rather than a rewrite — each service then builds, deploys and scales on its
+  own.
+- [ ] **Redis cache + RabbitMQ queue for the high-demand endpoints.** **Redis** for the hot
+  reads — leaderboard, gamification/XP, class stats, and cached AI explanations / tutor
+  answers (`REDIS_URL` is already a config knob). **RabbitMQ** to replace the in-process
+  goroutine that runs the coursework pipeline (material → exam) and the scheduler's jobs,
+  so a burst of uploads queues instead of spawning goroutines — with retries and a
+  dead-letter queue.
 
 ---
 
