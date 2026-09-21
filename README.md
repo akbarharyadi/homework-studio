@@ -307,6 +307,14 @@ These are the next steps if it grew into a product.
   goroutine that runs the coursework pipeline (material → exam) and the scheduler's jobs,
   so a burst of uploads queues instead of spawning goroutines — with retries and a
   dead-letter queue.
+- [ ] **AI-designed E2E test automation — user stories → Playwright.** Write each role's
+  journey as a plain-language user story ("as a teacher, I upload material and publish
+  the generated exam"; "as a student, I take it and see my score and XP"), have an AI
+  step turn every story into a **Playwright** spec, and run the suite in CI against the
+  seeded stack the docs workflow already stands up. A failing test points back to the
+  story it came from, and when the UI changes the AI re-derives the selectors instead of
+  a human patching them — the same "AI in how we build it" idea as the docs auto-update,
+  applied to tests.
 
 ---
 
